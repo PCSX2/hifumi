@@ -17,7 +17,7 @@
         <gson.version>2.13.2</gson.version> <!-- https://central.sonatype.com/artifact/com.google.code.gson/gson -->
         <snakeyaml.version>2.5</snakeyaml.version> <!-- https://central.sonatype.com/artifact/org.yaml/snakeyaml -->
         <deepl.version>1.12.0</deepl.version> <!-- https://central.sonatype.com/artifact/com.deepl.api/deepl-java -->
-        <sqlite.version>3.51.0.0</sqlite.version> <!-- https://central.sonatype.com/artifact/org.xerial/sqlite-jdbc -->
+        <sqlite.version>3.51.1.0</sqlite.version> <!-- https://central.sonatype.com/artifact/org.xerial/sqlite-jdbc -->
         <jfreechart.version>1.5.6</jfreechart.version> <!-- https://central.sonatype.com/artifact/org.jfree/jfreechart -->
         <ini4j.version>0.5.4</ini4j.version> <!-- https://central.sonatype.com/artifact/org.ini4j/ini4j -->
         

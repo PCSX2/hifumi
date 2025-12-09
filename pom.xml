@@ -13,7 +13,7 @@
         <slf4j.version>2.0.17</slf4j.version> <!-- https://central.sonatype.com/artifact/org.slf4j/slf4j-api -->
         <jsoup.version>1.21.2</jsoup.version> <!-- https://central.sonatype.com/artifact/org.jsoup/jsoup -->
         <commonslang.version>3.20.0</commonslang.version> <!-- https://central.sonatype.com/artifact/org.apache.commons/commons-lang3 -->
-        <commonstext.version>1.14.0</commonstext.version> <!-- https://central.sonatype.com/artifact/org.apache.commons/commons-text -->
+        <commonstext.version>1.15.0</commonstext.version> <!-- https://central.sonatype.com/artifact/org.apache.commons/commons-text -->
         <gson.version>2.13.2</gson.version> <!-- https://central.sonatype.com/artifact/com.google.code.gson/gson -->
         <snakeyaml.version>2.5</snakeyaml.version> <!-- https://central.sonatype.com/artifact/org.yaml/snakeyaml -->
         <deepl.version>1.12.0</deepl.version> <!-- https://central.sonatype.com/artifact/com.deepl.api/deepl-java -->

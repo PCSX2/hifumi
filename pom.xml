@@ -9,7 +9,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         
         <!-- Dependency Versions -->
-        <jda.version>6.1.0</jda.version> <!-- https://central.sonatype.com/artifact/net.dv8tion/JDA -->
+        <jda.version>6.1.2</jda.version> <!-- https://central.sonatype.com/artifact/net.dv8tion/JDA -->
         <slf4j.version>2.0.17</slf4j.version> <!-- https://central.sonatype.com/artifact/org.slf4j/slf4j-api -->
         <jsoup.version>1.21.2</jsoup.version> <!-- https://central.sonatype.com/artifact/org.jsoup/jsoup -->
         <commonslang.version>3.20.0</commonslang.version> <!-- https://central.sonatype.com/artifact/org.apache.commons/commons-lang3 -->

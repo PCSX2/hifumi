@@ -1,6 +1,6 @@
 services:
   hifumi:
-    image: ghcr.io/redpanda4552/hifumibot:latest
+    image: ghcr.io/pcsx2/hifumi:latest
     container_name: hifumi
     restart: unless-stopped
     environment:

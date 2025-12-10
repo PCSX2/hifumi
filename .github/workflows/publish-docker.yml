@@ -18,9 +18,11 @@ jobs:
 
     steps:
       - name: Checkout
+        if: github.repository == 'PCSX2/hifumi'
         uses: actions/checkout@v4
 
       - name: Log in to GHCR
+        if: github.repository == 'PCSX2/hifumi'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -28,11 +30,12 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build & Push Docker image
+        if: github.repository == 'PCSX2/hifumi'
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           # FIXME: replace these when transitioning repo ownership
           tags: |
-            ghcr.io/redpanda4552/hifumibot:latest
-            ghcr.io/redpanda4552/hifumibot:${{ github.ref_name }}
+            ghcr.io/pcsx2/hifumi:latest
+            ghcr.io/pcsx2/hifumi:${{ github.ref_name }}

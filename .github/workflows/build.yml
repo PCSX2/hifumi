@@ -15,9 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     name: ☕ Build Project
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v5
         with:
           distribution: 'corretto'
           java-version: '25'
@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     name: 🐋 Build Docker Container
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
   
       - name: Build Docker Image
         run: docker build .

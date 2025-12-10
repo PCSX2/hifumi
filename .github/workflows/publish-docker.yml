@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Checkout
         if: github.repository == 'PCSX2/hifumi'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Log in to GHCR
         if: github.repository == 'PCSX2/hifumi'

@@ -18,6 +18,10 @@ FROM amazoncorretto:25-alpine AS final_stage
 # Update Alpine security packages
 RUN apk update && apk upgrade --no-cache
 
+# Needed for awt font stuff
+RUN apk add --no-cache msttcorefonts-installer fontconfig
+RUN update-ms-fonts
+
 # Create non-root user
 RUN addgroup -S app && adduser -S app -G app
 

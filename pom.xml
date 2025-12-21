@@ -1,6 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>io.github.redpanda4552</groupId>
+    <groupId>net.pcsx2</groupId>
     <artifactId>HifumiBot</artifactId>
     <version>4.8.1</version>
     <properties>
@@ -55,7 +55,7 @@
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
-                            <mainClass>io.github.redpanda4552.HifumiBot.HifumiBot</mainClass>
+                            <mainClass>net.pcsx2.hifumi.HifumiBot</mainClass>
                             <!-- Allows version info from here to be put into MANIFEST.mf. -->
                             <!-- Allows code to later look up the version. -->
                             <addDefaultImplementationEntries>true</addDefaultImplementationEntries>

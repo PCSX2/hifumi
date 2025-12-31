@@ -27,6 +27,12 @@ import java.time.Duration;
 import java.time.Instant;
 
 import com.deepl.api.Translator;
+
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.requests.GatewayIntent;
+import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import net.pcsx2.hifumi.command.CommandIndex;
 import net.pcsx2.hifumi.config.Config;
 import net.pcsx2.hifumi.config.ConfigManager;
@@ -49,13 +55,6 @@ import net.pcsx2.hifumi.permissions.PermissionManager;
 import net.pcsx2.hifumi.util.Log;
 import net.pcsx2.hifumi.util.Messaging;
 import net.pcsx2.hifumi.util.Strings;
-
-import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.JDABuilder;
-import net.dv8tion.jda.api.entities.Activity;
-import net.dv8tion.jda.api.requests.GatewayIntent;
-import net.dv8tion.jda.api.utils.MemberCachePolicy;
-import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import okhttp3.OkHttpClient;
 
 public class HifumiBot {
@@ -131,9 +130,8 @@ public class HifumiBot {
 
         try {
             jda = JDABuilder.createDefault(discordBotToken)
-                    .enableIntents(GatewayIntent.GUILD_PRESENCES, GatewayIntent.GUILD_MEMBERS, GatewayIntent.MESSAGE_CONTENT)
-                    .setMemberCachePolicy(MemberCachePolicy.ALL)
-                    .enableCache(CacheFlag.CLIENT_STATUS)
+                    .enableIntents(GatewayIntent.GUILD_MEMBERS, GatewayIntent.MESSAGE_CONTENT)
+                    .setMemberCachePolicy(MemberCachePolicy.DEFAULT)
                     .setAutoReconnect(true)
                     .build().awaitReady();
         } catch (Exception e) {

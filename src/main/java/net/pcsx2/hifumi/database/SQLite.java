@@ -1,7 +1,5 @@
 package net.pcsx2.hifumi.database;
 
-import java.io.FileNotFoundException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -67,6 +65,7 @@ public class SQLite {
             }
 
             conn.commit(); // commit all statements
+            conn.setAutoCommit(true);
         } catch (Exception e) {
             try {
                 conn.rollback(); // rollback if anything fails

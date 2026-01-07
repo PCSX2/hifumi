@@ -23,12 +23,11 @@
  */
 package net.pcsx2.hifumi.util;
 
+import java.awt.Color;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
-
-import net.pcsx2.hifumi.HifumiBot;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
@@ -44,6 +43,7 @@ import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
+import net.pcsx2.hifumi.HifumiBot;
 
 public class Messaging {
     
@@ -188,7 +188,11 @@ public class Messaging {
         Messaging.sendMessageEmbed(HifumiBot.getSelf().getConfig().channels.systemOutputChannelId, embed);
     }
 
-    public static void logException(String className, String methodName, Exception e) {
+    public static void logException(Throwable e) {
+        logException(null, null, e);
+    }
+
+    public static void logException(String className, String methodName, Throwable e) {
         if (HifumiBot.getSelf().getJDA() == null || HifumiBot.getSelf().getConfig() == null || HifumiBot.getSelf().getConfig().channels.systemOutputChannelId.isEmpty()) {
             e.printStackTrace();
             return;
@@ -203,7 +207,14 @@ public class Messaging {
         }
 
         EmbedBuilder eb = new EmbedBuilder();
-        eb.setTitle("Exception caught in " + className + "." + methodName);
+        eb.setColor(Color.RED);
+        
+        if (className != null && methodName != null) {
+            eb.setTitle("Exception caught in " + className + "." + methodName);
+        } else {
+            eb.setTitle("Exception caught");
+        }
+        
         eb.addField("Message", messageContent, false);
         StringBuilder sb = new StringBuilder();
 

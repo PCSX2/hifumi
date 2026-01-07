@@ -28,7 +28,10 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+
+import net.pcsx2.hifumi.util.Messaging;
 
 public class Scheduler {
 
@@ -37,7 +40,7 @@ public class Scheduler {
     private HashMap<String, ScheduledFuture<?>> statuses = new HashMap<String, ScheduledFuture<?>>();
 
     public Scheduler() {
-        this.threadPool = Executors.newScheduledThreadPool(4);
+        this.threadPool = Executors.newScheduledThreadPool(6, new SchedulerThreadFactory("pool"));
     }
 
     /**
@@ -108,6 +111,28 @@ public class Scheduler {
 
         public NoSuchRunnableException(String message) {
             super(message);
+        }
+    }
+
+    public class SchedulerThreadFactory implements ThreadFactory {
+        String slug;
+        private int counter = 0;
+
+        public SchedulerThreadFactory(String slug) {
+            this.slug = slug;
+        }
+
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r, "hifumi-" + slug + "-" + counter++);
+            t.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+                @Override
+                public void uncaughtException(Thread t, Throwable e) {
+                    Messaging.logException(e);
+                }
+            });
+
+            return t;
         }
     }
 }

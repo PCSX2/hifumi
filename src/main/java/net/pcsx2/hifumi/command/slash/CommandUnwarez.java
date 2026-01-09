@@ -143,7 +143,7 @@ public class CommandUnwarez extends AbstractSlashCommand {
         Member member = event.getMember();
         String warezRoleId = HifumiBot.getSelf().getConfig().roles.warezRoleId;
         
-        if (RoleUtils.memberHasRole(member, warezRoleId)) {
+        if (!RoleUtils.memberHasRole(member, warezRoleId)) {
             event.getHook().sendMessage("You do not have the warez role.").setEphemeral(true).queue();
             return;
         }

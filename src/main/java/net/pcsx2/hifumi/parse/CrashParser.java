@@ -89,6 +89,14 @@ public class CrashParser extends AbstractParser {
                         "To avoid crashing, uninstall Overwolf."
                     );
                 }
+
+                if(normalizedLine.contains("rtsshooks64.dll"))
+                {
+                    this.errors.add(
+                        "[Fatal] RivaTuner statistics server detected. This program is known to cause memory leaks when using DX12 on certain hardware.\n" +
+                        "If PCSX2 appears to be leaking memory, uninstall RivaTuner."
+                    );
+                }
             }
 
             reader.close();

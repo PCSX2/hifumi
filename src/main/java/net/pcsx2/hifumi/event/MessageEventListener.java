@@ -32,7 +32,7 @@ public class MessageEventListener extends ListenerAdapter {
     
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
-        HifumiBot.getSelf().getScheduler().runOnce(() -> {
+        HifumiBot.getSelf().getScheduler().addToMessageEventFIFO(() -> {
             // Store the time of this event handler firing
             Instant now = Instant.now();
 
@@ -133,7 +133,7 @@ public class MessageEventListener extends ListenerAdapter {
 
     @Override
     public void onMessageDelete(MessageDeleteEvent event) {
-        HifumiBot.getSelf().getScheduler().runOnce(() -> {
+        HifumiBot.getSelf().getScheduler().addToMessageEventFIFO(() -> {
             Database.insertMessageDeleteEvent(event);
             MessageObject deletedMessage = Database.getLatestMessage(event.getMessageId());
 
@@ -148,7 +148,7 @@ public class MessageEventListener extends ListenerAdapter {
 
     @Override 
     public void onMessageBulkDelete(MessageBulkDeleteEvent event) {
-        HifumiBot.getSelf().getScheduler().runOnce(() -> {
+        HifumiBot.getSelf().getScheduler().addToMessageEventFIFO(() -> {
             Database.insertMessageBulkDeleteEvent(event);
 
             for (String messageId : event.getMessageIds()) {
@@ -166,7 +166,7 @@ public class MessageEventListener extends ListenerAdapter {
 
     @Override
     public void onMessageUpdate(MessageUpdateEvent event) {
-        HifumiBot.getSelf().getScheduler().runOnce(() -> {
+        HifumiBot.getSelf().getScheduler().addToMessageEventFIFO(() -> {
             MessageObject beforeEditMessage = Database.getLatestMessage(event.getMessageId());
             
             if (!HifumiBot.getSelf().getPermissionManager().hasPermission(PermissionLevel.ADMIN, event.getMember())) {

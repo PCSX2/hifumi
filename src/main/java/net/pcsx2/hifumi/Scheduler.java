@@ -25,7 +25,9 @@ package net.pcsx2.hifumi;
 
 import java.util.HashMap;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
@@ -36,11 +38,17 @@ import net.pcsx2.hifumi.util.Messaging;
 public class Scheduler {
 
     private ScheduledExecutorService threadPool;
+    private ExecutorService messageEventFIFO;
     private HashMap<String, Runnable> runnables = new HashMap<String, Runnable>();
     private HashMap<String, ScheduledFuture<?>> statuses = new HashMap<String, ScheduledFuture<?>>();
 
     public Scheduler() {
         this.threadPool = Executors.newScheduledThreadPool(6, new SchedulerThreadFactory("pool"));
+        this.messageEventFIFO = Executors.newSingleThreadExecutor(new SchedulerThreadFactory("msg-evt-fifo"));
+    }
+
+    public void addToMessageEventFIFO(Runnable runnable) {
+        this.messageEventFIFO.submit(runnable);
     }
 
     /**

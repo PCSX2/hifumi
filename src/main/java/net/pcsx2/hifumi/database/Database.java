@@ -119,6 +119,7 @@ public class Database {
                     PreparedStatement insertAttachments = conn.prepareStatement("""
                             INSERT INTO message_attachment (discord_id, timestamp, fk_message, content_type, proxy_url, filename)
                             VALUES (?, ?, ?, ?, ?, ?);
+                            ON CONFLICT (discord_id) DO NOTHING;
                             """);
 
                     for (Attachment attachment : attachments) {

@@ -138,23 +138,41 @@ public class CommandIndex {
     
     public void rebuildDynamic() {
         HashMap<String, DynamicCommand> commands = HifumiBot.getSelf().getDynCmdConfig().dynamicCommands;
+        int commandCount = 0;
         
         for (String commandName : commands.keySet()) {
             if (slashCommands.containsKey(commandName)) {
                 Messaging.logInfo("CommandIndex", "rebuildDynamic", "Skipping dynamic command \"" + commandName + "\", found a built-in command with the same name");
-                break;
+                continue;
+            }
+
+            if (++commandCount > 100) {
+                Messaging.logInfo("CommandIndex", "rebuildDynamic", "Command `/" + commandName + "` is being skipped, the limit of 100 commands has been reached.");
+                continue;
             }
             
             DynamicCommand command = commands.get(commandName);
             SlashCommandData commandData = Commands.slash(command.getName(), command.getDescription());
             HashMap<String, DynamicSubcommand> subcommands = command.getSubcommands();
+            int subcommandCount = 0;
             
             for (String subcommandName : subcommands.keySet()) {
+                if (++subcommandCount > 25) {
+                    Messaging.logInfo("CommandIndex", "rebuildDynamic", "Subcommand `/" + commandName + " " + subcommandName + "` is being skipped, the limit of 25 subcommands has been reached.");
+                    continue;
+                }
+
                 DynamicSubcommand subcommand = subcommands.get(subcommandName);
                 SubcommandGroupData subgroup = new SubcommandGroupData(subcommand.getName(), subcommand.getDescription());
                 HashMap<String, DynamicChoice> choices = subcommand.getChoices();
+                int choiceCount = 0;
                 
                 for (String choiceName : choices.keySet()) {
+                    if (++choiceCount > 25) {
+                        Messaging.logInfo("CommandIndex", "rebuildDynamic", "Choice `/" + commandName + " " + subcommandName + " " + choiceName + "` is being skipped, the limit of 25 choices has been reached.");
+                        continue;
+                    }
+
                     DynamicChoice choice = choices.get(choiceName);
                     SubcommandData subcommandData = new SubcommandData(choice.getName(), choice.getDescription());
                     subcommandData.addOption(OptionType.USER, "mention", "Mention");

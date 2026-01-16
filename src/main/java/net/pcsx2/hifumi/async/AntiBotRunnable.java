@@ -4,13 +4,6 @@ import java.awt.Color;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 
-import net.pcsx2.hifumi.HifumiBot;
-import net.pcsx2.hifumi.database.Database;
-import net.pcsx2.hifumi.database.objects.MessageObject;
-import net.pcsx2.hifumi.moderation.ModActions;
-import net.pcsx2.hifumi.util.Messaging;
-import net.pcsx2.hifumi.util.Strings;
-
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
@@ -19,6 +12,12 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
+import net.pcsx2.hifumi.HifumiBot;
+import net.pcsx2.hifumi.database.Database;
+import net.pcsx2.hifumi.database.objects.MessageObject;
+import net.pcsx2.hifumi.moderation.ModActions;
+import net.pcsx2.hifumi.util.Messaging;
+import net.pcsx2.hifumi.util.Strings;
 
 public class AntiBotRunnable implements Runnable {
 
@@ -41,7 +40,7 @@ public class AntiBotRunnable implements Runnable {
         String bodyContent = this.message.getContentRaw();
         ArrayList<String> links = Strings.extractUrls(bodyContent);
 
-        if (links.size() >= LINK_THRESHOLD) {
+        if (links.size() + this.message.getAttachments().size() >= LINK_THRESHOLD) {
             long authorIdLong = this.message.getAuthor().getIdLong();
             OffsetDateTime currentTime = OffsetDateTime.now();
             OffsetDateTime cutoffTime = currentTime.minusDays(DAYS_SINCE_LAST_MESSAGE);
@@ -68,13 +67,20 @@ public class AntiBotRunnable implements Runnable {
                     }
 
                     eb.setTitle("User timed out for suspected image scams");
-                    eb.setDescription("User has not posted anything else in the last " + DAYS_SINCE_LAST_MESSAGE + " days, but posted at least " + LINK_THRESHOLD + " links in one message.\n\n");
+                    eb.setDescription("User has not posted anything else in the last " + DAYS_SINCE_LAST_MESSAGE + " days, but posted at least " + LINK_THRESHOLD + " links and/or attachments in one message.\n\n");
                     eb.appendDescription("Any other messages they have sent in the last " + AGE_MINUTES_TO_REMOVE_MESSAGES + " minutes are also being deleted for safety.\n\n");
-                    eb.appendDescription("You may review the links below. If they look safe, you may use the green button to remove the timeout. If they look malicious, use the red button to automatically run the /spamkick command.\n\n");
+                    eb.appendDescription("You may review the links and/or attachments below. If they look safe, you may use the green button to remove the timeout. If they look malicious, use the red button to automatically run the /spamkick command.\n\n");
                     eb.addField("User ID", String.valueOf(authorIdLong), true);
                     eb.addField("Username", user.getName(), true);
                     eb.addField("Display Name (as mention)", user.getAsMention(), true);
                     eb.setColor(Color.YELLOW);
+                    eb.appendDescription("Links in body:\n");
+
+                    for (String link : links) {
+                        eb.appendDescription(link + "\n");
+                    }
+
+                    eb.appendDescription("Attachments:\n");
 
                     for (String link : links) {
                         eb.appendDescription(link + "\n");

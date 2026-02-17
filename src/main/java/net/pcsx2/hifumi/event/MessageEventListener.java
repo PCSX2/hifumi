@@ -16,6 +16,7 @@ import net.pcsx2.hifumi.EventLogging;
 import net.pcsx2.hifumi.HifumiBot;
 import net.pcsx2.hifumi.async.AntiBotRunnable;
 import net.pcsx2.hifumi.async.EntryBarrierRunnable;
+import net.pcsx2.hifumi.async.MaliciousForwardRunnable;
 import net.pcsx2.hifumi.async.SpamReviewRunnable;
 import net.pcsx2.hifumi.async.UrlChangeReviewRunnable;
 import net.pcsx2.hifumi.database.Database;
@@ -105,6 +106,7 @@ public class MessageEventListener extends ListenerAdapter {
 
                 // Run through the general spam review
                 HifumiBot.getSelf().getScheduler().runOnce(new SpamReviewRunnable(event.getMessage(), event.getMessage().getTimeCreated()));
+                HifumiBot.getSelf().getScheduler().runOnce(new MaliciousForwardRunnable(event.getMessage()));
                 
                 // Notify users if they are pinging the bot
                 if (Messaging.hasBotPing(event.getMessage())) {

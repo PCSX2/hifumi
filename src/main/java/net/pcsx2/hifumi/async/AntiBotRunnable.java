@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.buttons.ButtonStyle;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.Message.Attachment;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
@@ -82,8 +83,8 @@ public class AntiBotRunnable implements Runnable {
 
                     eb.appendDescription("Attachments:\n");
 
-                    for (String link : links) {
-                        eb.appendDescription(link + "\n");
+                    for (Attachment attachment : this.message.getAttachments()) {
+                        eb.appendDescription(attachment.getProxyUrl() + "\n");
                     }
 
                     MessageCreateBuilder mb = new MessageCreateBuilder();

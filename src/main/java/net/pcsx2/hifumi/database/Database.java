@@ -10,6 +10,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.Message.Attachment;
+import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.automod.AutoModResponse;
+import net.dv8tion.jda.api.events.automod.AutoModExecutionEvent;
+import net.dv8tion.jda.api.events.guild.GuildBanEvent;
+import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
+import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
+import net.dv8tion.jda.api.events.message.MessageBulkDeleteEvent;
+import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
+import net.dv8tion.jda.api.events.message.MessageUpdateEvent;
+import net.dv8tion.jda.api.events.user.update.UserUpdateGlobalNameEvent;
+import net.dv8tion.jda.api.events.user.update.UserUpdateNameEvent;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.pcsx2.hifumi.HifumiBot;
 import net.pcsx2.hifumi.charting.AutomodChartData;
 import net.pcsx2.hifumi.charting.MemberChartData;
@@ -27,27 +41,12 @@ import net.pcsx2.hifumi.util.Messaging;
 import net.pcsx2.hifumi.util.TimeUtils;
 import net.pcsx2.hifumi.util.UserUtils;
 
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.Message.Attachment;
-import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.entities.automod.AutoModResponse;
-import net.dv8tion.jda.api.events.automod.AutoModExecutionEvent;
-import net.dv8tion.jda.api.events.guild.GuildBanEvent;
-import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
-import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
-import net.dv8tion.jda.api.events.message.MessageBulkDeleteEvent;
-import net.dv8tion.jda.api.events.message.MessageDeleteEvent;
-import net.dv8tion.jda.api.events.message.MessageUpdateEvent;
-import net.dv8tion.jda.api.events.user.update.UserUpdateGlobalNameEvent;
-import net.dv8tion.jda.api.events.user.update.UserUpdateNameEvent;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
-
 public class Database {
 
     /**
      * Store user, channel, message, attachment, and event records
      */
-    public static void insertMessage(Message message, boolean skipEvent) {
+    public static void insertMessage(Message message) {
         Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
 
         try {
@@ -75,7 +74,7 @@ public class Database {
             // Check if the referenced message exists in the database; if not, try to add it first.
             if (message.getReferencedMessage() != null) {
                 if (Database.getLatestMessage(message.getReferencedMessage().getIdLong()) == null) {
-                    Database.insertMessage(message.getReferencedMessage(), skipEvent);
+                    Database.insertMessage(message.getReferencedMessage());
                 }
             }
 
@@ -99,7 +98,7 @@ public class Database {
             insertMessage.executeUpdate();
             insertMessage.close();
 
-            if (!skipEvent) {
+            if (!HifumiBot.getSelf().getPermissionManager().hasMessageLogBypass(message)) {
                 PreparedStatement insertEvent = conn.prepareStatement("""
                         INSERT INTO message_event (fk_user, fk_message, timestamp, action, content)
                         VALUES (?, ?, ?, ?, ?);
@@ -308,39 +307,41 @@ public class Database {
             insertMessage.executeUpdate();
             insertMessage.close();
 
-            List<Attachment> attachments = event.getMessage().getAttachments();
+            if (!HifumiBot.getSelf().getPermissionManager().hasMessageLogBypass(event.getMessage())) {
+                List<Attachment> attachments = event.getMessage().getAttachments();
 
-            if (!attachments.isEmpty()) {
-                PreparedStatement insertAttachment = conn.prepareStatement("""
-                        INSERT INTO message_attachment (discord_id, timestamp, fk_message, content_type, proxy_url)
-                        VALUES (?, ?, ?, ?, ?)
-                        ON CONFLICT (discord_id) DO NOTHING;
-                        """);
+                if (!attachments.isEmpty()) {
+                    PreparedStatement insertAttachment = conn.prepareStatement("""
+                            INSERT INTO message_attachment (discord_id, timestamp, fk_message, content_type, proxy_url)
+                            VALUES (?, ?, ?, ?, ?)
+                            ON CONFLICT (discord_id) DO NOTHING;
+                            """);
 
-                for (Attachment attachment : attachments) {
-                    insertAttachment.setLong(1, attachment.getIdLong());
-                    insertAttachment.setLong(2, attachment.getTimeCreated().toEpochSecond());
-                    insertAttachment.setLong(3, event.getMessageIdLong());
-                    insertAttachment.setString(4, attachment.getContentType());
-                    insertAttachment.setString(5, attachment.getProxyUrl());
-                    insertAttachment.addBatch();
+                    for (Attachment attachment : attachments) {
+                        insertAttachment.setLong(1, attachment.getIdLong());
+                        insertAttachment.setLong(2, attachment.getTimeCreated().toEpochSecond());
+                        insertAttachment.setLong(3, event.getMessageIdLong());
+                        insertAttachment.setString(4, attachment.getContentType());
+                        insertAttachment.setString(5, attachment.getProxyUrl());
+                        insertAttachment.addBatch();
+                    }
+                    
+                    insertAttachment.executeBatch();
+                    insertAttachment.close();
                 }
-                
-                insertAttachment.executeBatch();
-                insertAttachment.close();
-            }
 
-            PreparedStatement insertEvent = conn.prepareStatement("""
-                    INSERT INTO message_event (fk_user, fk_message, timestamp, action, content)
-                    VALUES (?, ?, ?, ?, ?);
-                    """);
-            insertEvent.setLong(1, event.getAuthor().getIdLong());
-            insertEvent.setLong(2, event.getMessageIdLong());
-            insertEvent.setLong(3, (event.getMessage().getTimeEdited() != null ? event.getMessage().getTimeEdited() : event.getMessage().getTimeCreated()).toEpochSecond());
-            insertEvent.setString(4, "edit");
-            insertEvent.setString(5, event.getMessage().getContentRaw());
-            insertEvent.executeUpdate();
-            insertEvent.close();
+                PreparedStatement insertEvent = conn.prepareStatement("""
+                        INSERT INTO message_event (fk_user, fk_message, timestamp, action, content)
+                        VALUES (?, ?, ?, ?, ?);
+                        """);
+                insertEvent.setLong(1, event.getAuthor().getIdLong());
+                insertEvent.setLong(2, event.getMessageIdLong());
+                insertEvent.setLong(3, (event.getMessage().getTimeEdited() != null ? event.getMessage().getTimeEdited() : event.getMessage().getTimeCreated()).toEpochSecond());
+                insertEvent.setString(4, "edit");
+                insertEvent.setString(5, event.getMessage().getContentRaw());
+                insertEvent.executeUpdate();
+                insertEvent.close();
+            }
         } catch (SQLException e) {
              Messaging.logException("Database", "insertMessageUpdateEvent", e);
         }

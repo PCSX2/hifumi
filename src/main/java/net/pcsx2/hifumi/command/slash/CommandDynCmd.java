@@ -110,7 +110,7 @@ public class CommandDynCmd extends AbstractSlashCommand {
             subcommand.clearChoice(choiceStr);
 
             if (subcommand.getChoices().size() == 0) {
-                HifumiBot.getSelf().getDynCmdConfig().dynamicCommands.remove(commandStr);
+                command.clearSubcommand(subcommandStr);
             } else {
                 command.putSubcommand(subcommand);
                 HifumiBot.getSelf().getDynCmdConfig().dynamicCommands.put(commandStr, command);

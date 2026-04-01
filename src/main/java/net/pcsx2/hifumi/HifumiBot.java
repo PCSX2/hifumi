@@ -131,7 +131,8 @@ public class HifumiBot {
         try {
             jda = JDABuilder.createDefault(discordBotToken)
                     .enableIntents(GatewayIntent.GUILD_MEMBERS, GatewayIntent.MESSAGE_CONTENT)
-                    .setMemberCachePolicy(MemberCachePolicy.DEFAULT)
+                    // Required for role add/remove events to function
+                    .setMemberCachePolicy(MemberCachePolicy.ALL)
                     .setAutoReconnect(true)
                     .build().awaitReady();
         } catch (Exception e) {

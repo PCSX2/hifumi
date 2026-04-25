@@ -1,8 +1,19 @@
 package net.pcsx2.hifumi.async;
 
 import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.net.URI;
+import java.net.URL;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+
+import javax.imageio.ImageIO;
+
+import org.apache.commons.lang3.StringUtils;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
@@ -12,6 +23,7 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.Message.Attachment;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.pcsx2.hifumi.HifumiBot;
 import net.pcsx2.hifumi.database.Database;
@@ -57,8 +69,40 @@ public class AntiBotRunnable implements Runnable {
                 User user = this.message.getAuthor();
 
                 if (timeoutRes) {
-                    // Since our timeout succeeded, now sweep up any other messages the bot might have
-                    // blasted out while this runnable was going.
+                    // Since our timeout succeeded, grab some thumbnails of the images so we have something to present for review before deleting stuff.
+                    // If we delete the message first then attachments go too.
+                    ArrayList<FileUpload> files = new ArrayList<FileUpload>();
+                    
+                    for (Attachment attachment : this.message.getAttachments()) {
+                        // For now, just do one image... If we have problems later and need them all, yank out this if.
+                        if (!files.isEmpty()) {
+                            break;
+                        }
+                        
+                        try {
+                            URL url = URL.of(URI.create(attachment.getProxyUrl()), null);
+                            BufferedImage img = ImageIO.read(url);
+                            int width = img.getWidth() / 2, height = img.getHeight() / 2;
+                            Image scaled = img.getScaledInstance(width, height, Image.SCALE_FAST);
+                            BufferedImage bufImg = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+                            Graphics2D graph = bufImg.createGraphics();
+                            graph.drawImage(scaled, 0, 0, null);
+                            graph.dispose();
+                            
+                            try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+                                ImageIO.write(bufImg, "png", os);
+                                
+                                try (ByteArrayInputStream imgStream = new ByteArrayInputStream(os.toByteArray())) {
+                                    FileUpload file = FileUpload.fromData(imgStream, attachment.getFileName()).asSpoiler();
+                                    files.add(file);
+                                }
+                            }
+                        } catch (Exception e) {
+                            // Squelch
+                        }
+                    }
+                    
+                    // Sweep up any other messages the bot might have blasted out while this runnable was going.
                     OffsetDateTime timeToRemoveMessagesSince = OffsetDateTime.now().minusMinutes(AGE_MINUTES_TO_REMOVE_MESSAGES);
                     ArrayList<MessageObject> otherMessages = Database.getAllMessagesSinceTime(this.message.getAuthor().getIdLong(), timeToRemoveMessagesSince.toEpochSecond());
 
@@ -75,24 +119,36 @@ public class AntiBotRunnable implements Runnable {
                     eb.addField("Username", user.getName(), true);
                     eb.addField("Display Name (as mention)", user.getAsMention(), true);
                     eb.setColor(Color.YELLOW);
-                    eb.appendDescription("Links in body:\n");
+                    
+                    // Body content preview
+                    eb.addField("Body Content (raw, first 100 chars)", StringUtils.abbreviate(this.message.getContentRaw(), 100), false);
+                    
+                    // Links
+                    StringBuilder sb = new StringBuilder();
 
                     for (String link : links) {
-                        eb.appendDescription(link + "\n");
+                        sb.append(link + "\n");
                     }
-
-                    eb.appendDescription("Attachments:\n");
+                    
+                    eb.addField("Links in Body", sb.toString(), false);
+                    
+                    // Attachments
+                    sb = new StringBuilder();
 
                     for (Attachment attachment : this.message.getAttachments()) {
-                        eb.appendDescription(attachment.getProxyUrl() + "\n");
+                        sb.append(attachment.getProxyUrl() + "\n");
                     }
+                    
+                    eb.addField("Attachments", sb.toString(), false);
 
                     MessageCreateBuilder mb = new MessageCreateBuilder();
                     mb.addEmbeds(eb.build());
+                    mb.addFiles(files);
                     mb.addComponents(ActionRow.of(
                         Button.of(ButtonStyle.DANGER, "imagescam:dospamkick:" + authorIdLong, "Looks like a bot scam, kick user"), 
                         Button.of(ButtonStyle.SUCCESS, "imagescam:clear:" + authorIdLong, "Looks innocent, remove timeout")
                     ));
+                    
                     Messaging.sendMessage(HifumiBot.getSelf().getConfig().channels.systemOutputChannelId, mb.build());
                     return true;
                 } else {

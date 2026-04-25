@@ -3,18 +3,9 @@ package net.pcsx2.hifumi.event;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-
-import net.pcsx2.hifumi.HifumiBot;
-import net.pcsx2.hifumi.command.AbstractSlashCommand;
-import net.pcsx2.hifumi.command.slash.CommandEmulog;
-import net.pcsx2.hifumi.command.slash.CommandServerMetadata;
-import net.pcsx2.hifumi.command.slash.CommandWhois;
-import net.pcsx2.hifumi.moderation.ModActions;
-import net.pcsx2.hifumi.util.MemberUtils;
-import net.pcsx2.hifumi.util.Messaging;
-import net.pcsx2.hifumi.util.UserUtils;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.components.MessageTopLevelComponent;
@@ -25,6 +16,15 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.pcsx2.hifumi.HifumiBot;
+import net.pcsx2.hifumi.command.AbstractSlashCommand;
+import net.pcsx2.hifumi.command.slash.CommandEmulog;
+import net.pcsx2.hifumi.command.slash.CommandServerMetadata;
+import net.pcsx2.hifumi.command.slash.CommandWhois;
+import net.pcsx2.hifumi.moderation.ModActions;
+import net.pcsx2.hifumi.util.MemberUtils;
+import net.pcsx2.hifumi.util.Messaging;
+import net.pcsx2.hifumi.util.UserUtils;
 
 public class ButtonEventListener extends ListenerAdapter {
 
@@ -132,6 +132,7 @@ public class ButtonEventListener extends ListenerAdapter {
                             Button button = Button.of(ButtonStyle.PRIMARY, "imagescam:resolved:" + userIdLong, "Resolved by " + event.getUser().getEffectiveName() + " (kicked user)");
                             ActionRow actionRow = ActionRow.of(button);
                             event.getHook().editMessageComponentsById(event.getMessageId(), actionRow).queue();
+                            event.getMessage().editMessageAttachments(List.of()).queue();
                         }
                         case "clear" -> {
                             Optional<Member> memberOpt = MemberUtils.getOrRetrieveMember(event.getGuild(), userIdLong);
@@ -140,10 +141,14 @@ public class ButtonEventListener extends ListenerAdapter {
                                 Member member = memberOpt.get();
                                 member.removeTimeout().queue();
                                 event.reply("Timeout removed from user").setEphemeral(true).queue();
-                                Button button = Button.of(ButtonStyle.PRIMARY, "imagescam:resolved:" + userIdLong, "Resolved by " + event.getUser().getEffectiveName() + " (removed timeout)");
-                                ActionRow actionRow = ActionRow.of(button);
-                                event.getHook().editMessageComponentsById(event.getMessageId(), actionRow).queue();
+                            } else {
+                                event.reply("User could not be retrieved, did they already leave?").setEphemeral(true).queue();
                             }
+                            
+                            Button button = Button.of(ButtonStyle.PRIMARY, "imagescam:resolved:" + userIdLong, "Resolved by " + event.getUser().getEffectiveName() + " (removed timeout)");
+                            ActionRow actionRow = ActionRow.of(button);
+                            event.getHook().editMessageComponentsById(event.getMessageId(), actionRow).queue();
+                            event.getMessage().editMessageAttachments(List.of()).queue();
                         }
                         case "resolved" -> {
                             event.reply("This event has already been resolved.").setEphemeral(true).queue();

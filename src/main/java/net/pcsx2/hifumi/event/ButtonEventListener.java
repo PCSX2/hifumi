@@ -34,7 +34,6 @@ public class ButtonEventListener extends ListenerAdapter {
     public void onButtonInteraction(ButtonInteractionEvent event) {
         HifumiBot.getSelf().getScheduler().runOnce(() -> {
             String componentId = event.getComponentId();
-
             String[] parts = componentId.split(":");
 
             if (parts.length < 2) {
@@ -112,50 +111,59 @@ public class ButtonEventListener extends ListenerAdapter {
                     event.reply(reply).queue();
                     break;
                 case "imagescam":
-                    if (parts.length != 3) {
-                        event.reply("Malformed button ID, please tell pandubz that `" + componentId + "` is garbage and he should feel bad.").setEphemeral(true).queue();
-                        return;
-                    }
-
-                    Long userIdLong = Long.valueOf(parts[2]);
-                    Optional<User> userOpt = UserUtils.getOrRetrieveUser(userIdLong);
-
-                    if (userOpt.isEmpty()) {
-                        event.reply("User ID referenced by the button could not be found (did the user already leave the server?)").setEphemeral(true).queue();
-                        return;
-                    }
-
-                    switch (parts[1]) {
-                        case "dospamkick" -> {
-                            ModActions.kickAndNotifyUser(event.getGuild(), userIdLong);
-                            event.reply("Messaged user telling them we think they are a bot, and kicked them from the server.").setComponents(new ArrayList<MessageTopLevelComponent>()).setEphemeral(true).queue();
-                            Button button = Button.of(ButtonStyle.PRIMARY, "imagescam:resolved:" + userIdLong, "Resolved by " + event.getUser().getEffectiveName() + " (kicked user)");
-                            ActionRow actionRow = ActionRow.of(button);
-                            event.getHook().editMessageComponentsById(event.getMessageId(), actionRow).queue();
-                            event.getMessage().editMessageAttachments(List.of()).queue();
-                        }
-                        case "clear" -> {
-                            Optional<Member> memberOpt = MemberUtils.getOrRetrieveMember(event.getGuild(), userIdLong);
-
-                            if (memberOpt.isPresent()) {
-                                Member member = memberOpt.get();
-                                member.removeTimeout().queue();
-                                event.reply("Timeout removed from user").setEphemeral(true).queue();
-                            } else {
-                                event.reply("User could not be retrieved, did they already leave?").setEphemeral(true).queue();
+                    try {
+                        if (event.getMember().hasPermission(Permission.KICK_MEMBERS)) {
+                            if (parts.length != 3) {
+                                event.reply("Malformed button ID, please tell pandubz that `" + componentId + "` is garbage and he should feel bad.").setEphemeral(true).queue();
+                                return;
                             }
-                            
-                            Button button = Button.of(ButtonStyle.PRIMARY, "imagescam:resolved:" + userIdLong, "Resolved by " + event.getUser().getEffectiveName() + " (removed timeout)");
-                            ActionRow actionRow = ActionRow.of(button);
-                            event.getHook().editMessageComponentsById(event.getMessageId(), actionRow).queue();
-                            event.getMessage().editMessageAttachments(List.of()).queue();
-                        }
-                        case "resolved" -> {
-                            event.reply("This event has already been resolved.").setEphemeral(true).queue();
-                        }
-                        default -> {
-                            event.reply("Invalid second component of button ID `" + parts[1] + "`, either you did something evil or I am breaking horribly.").setEphemeral(true).queue();
-                        }
+
+                            Long userIdLong = Long.valueOf(parts[2]);
+                            Optional<User> userOpt = UserUtils.getOrRetrieveUser(userIdLong);
+
+                            if (userOpt.isEmpty()) {
+                                event.reply("User ID referenced by the button could not be found (did the user already leave the server?)").setEphemeral(true).queue();
+                                return;
+                            }
+
+                            switch (parts[1]) {
+                                case "dospamkick" -> {
+                                    ModActions.kickAndNotifyUser(event.getGuild(), userIdLong);
+                                    event.reply("Messaged user telling them we think they are a bot, and kicked them from the server.").setComponents(new ArrayList<MessageTopLevelComponent>()).setEphemeral(true).queue();
+                                    Button button = Button.of(ButtonStyle.PRIMARY, "imagescam:resolved:" + userIdLong, "Resolved by " + event.getUser().getEffectiveName() + " (kicked user)");
+                                    ActionRow actionRow = ActionRow.of(button);
+                                    event.getHook().editMessageComponentsById(event.getMessageId(), actionRow).queue();
+                                    event.getMessage().editMessageAttachments(List.of()).queue();
+                                }
+                                case "clear" -> {
+                                    Optional<Member> memberOpt = MemberUtils.getOrRetrieveMember(event.getGuild(), userIdLong);
+
+                                    if (memberOpt.isPresent()) {
+                                        Member member = memberOpt.get();
+                                        member.removeTimeout().queue();
+                                        event.reply("Timeout removed from user").setEphemeral(true).queue();
+                                    } else {
+                                        event.reply("User could not be retrieved, did they already leave?").setEphemeral(true).queue();
+                                    }
+                                    
+                                    Button button = Button.of(ButtonStyle.PRIMARY, "imagescam:resolved:" + userIdLong, "Resolved by " + event.getUser().getEffectiveName() + " (removed timeout)");
+                                    ActionRow actionRow = ActionRow.of(button);
+                                    event.getHook().editMessageComponentsById(event.getMessageId(), actionRow).queue();
+                                    event.getMessage().editMessageAttachments(List.of()).queue();
+                                }
+                                case "resolved" -> {
+                                    event.reply("This event has already been resolved.").setEphemeral(true).queue();
+                                }
+                                default -> {
+                                    event.reply("Invalid second component of button ID `" + parts[1] + "`, either you did something evil or I am breaking horribly.").setEphemeral(true).queue();
+                                }
+                            }
+                        } else {
+                            event.reply("You do not have permission to do this.").setEphemeral(true).queue();
+                        }  
+                    } catch (Exception e) {
+                        event.reply("An exception occurred and is being sent to the system logs channel").setEphemeral(true).queue();
+                        Messaging.logException(e);
                     }
                     
                     break;

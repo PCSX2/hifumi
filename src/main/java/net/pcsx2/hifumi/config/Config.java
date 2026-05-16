@@ -37,7 +37,6 @@ public class Config implements IConfig {
         return true;
     }
     
-    public Server server;
     public Channels channels;
     public SlashCommands slashCommands;
     public Roles roles;
@@ -52,7 +51,6 @@ public class Config implements IConfig {
     public SerializedEmbed unwarezPrompt;
 
     public Config() {
-        server = new Server();
         channels = new Channels();
         slashCommands = new SlashCommands();
         roles = new Roles();
@@ -65,14 +63,6 @@ public class Config implements IConfig {
         entryBarrierOptions = new EntryBarrierOptions();
         warezPrompt = new SerializedEmbed();
         unwarezPrompt = new SerializedEmbed();
-    }
-    
-    public class Server {
-        public String id;
-        
-        public Server() {
-            id = new String("");
-        }
     }
 
     public class Logging {

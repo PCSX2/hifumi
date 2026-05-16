@@ -50,11 +50,11 @@ public class Scheduler {
     }
 
     public void addToMessageEventFIFO(Runnable runnable) {
-        this.messageEventFIFO.submit(runnable);
+        this.messageEventFIFO.execute(runnable);
     }
     
     public void addToMessageFilterFIFO(MessageFilteringRunnable runnable) {
-    	this.messageFilterFIFO.submit(runnable);
+    	this.messageFilterFIFO.execute(runnable);
     }
 
     /**
@@ -62,7 +62,7 @@ public class Scheduler {
      * @param runnable
      */
     public void runOnce(Runnable runnable) {
-        this.threadPool.submit(runnable);
+        this.threadPool.execute(runnable);
     }
 
     /**

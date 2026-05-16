@@ -17,8 +17,8 @@ import net.dv8tion.jda.api.utils.FileUpload;
 
 public class AttachmentUtils {
 
-	public static ArrayList<FileUpload> getMinifiedAttachments(Message message) {
-		ArrayList<FileUpload> files = new ArrayList<FileUpload>();
+    public static ArrayList<FileUpload> getMinifiedAttachments(Message message) {
+        ArrayList<FileUpload> files = new ArrayList<FileUpload>();
         
         for (Attachment attachment : message.getAttachments()) {
             // For now, just do one image... If we have problems later and need them all, yank out this if.
@@ -50,5 +50,5 @@ public class AttachmentUtils {
         }
         
         return files;
-	}
+    }
 }

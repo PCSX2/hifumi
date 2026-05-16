@@ -141,12 +141,12 @@ public class HifumiBot {
 
 
         try {
-        	updateStatus("Loading configs...");
-        	Log.info("Initializing main config");
+            updateStatus("Loading configs...");
+            Log.info("Initializing main config");
             ConfigManager.createConfigIfNotExists(ConfigType.CORE);
             config = (Config) ConfigManager.read(ConfigType.CORE);
             ConfigManager.write(config);
-        	
+            
             Log.info("Initializing dyncmd config");
             ConfigManager.createConfigIfNotExists(ConfigType.DYNCMD);
             dynCmdConfig = (DynCmdConfig) ConfigManager.read(ConfigType.DYNCMD);

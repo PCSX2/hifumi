@@ -670,34 +670,34 @@ public class Database {
     }
     
     public static HashMap<Long, Integer> getMessageAggregateCountsByChannelSinceTime(long userIdLong, long timestamp) {
-    	HashMap<Long, Integer> ret = new HashMap<Long, Integer>();
-    	Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
-    	
-    	try (PreparedStatement getAggregateMessages = conn.prepareStatement("""
-    				SELECT
-						COUNT(m.message_id) AS message_count, m.fk_channel
-					FROM message_event AS e
-					INNER JOIN message AS m ON e.fk_message = m.message_id
-					WHERE e.fk_user = ?
-					AND e.action = 'send'
-					AND e.timestamp >= ?
-					GROUP BY m.fk_channel
-					ORDER BY e.timestamp DESC
-    				""")) {
-    		getAggregateMessages.setLong(1, userIdLong);
-    		getAggregateMessages.setLong(2, timestamp);
-    		ResultSet res = getAggregateMessages.executeQuery();
-    		
-    		while (res.next()) {
-    			Long channelId = res.getLong("fk_channel");
-    			Integer messageCount = res.getInt("message_count");
-    			ret.put(channelId, messageCount);
-    		}
-    	} catch (SQLException e) {
-    		Messaging.logException("Database", "getMessageAggregateCountsByChannelSinceTime", e);
-    	}
-    	
-    	return ret;
+        HashMap<Long, Integer> ret = new HashMap<Long, Integer>();
+        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        
+        try (PreparedStatement getAggregateMessages = conn.prepareStatement("""
+                    SELECT
+                        COUNT(m.message_id) AS message_count, m.fk_channel
+                    FROM message_event AS e
+                    INNER JOIN message AS m ON e.fk_message = m.message_id
+                    WHERE e.fk_user = ?
+                    AND e.action = 'send'
+                    AND e.timestamp >= ?
+                    GROUP BY m.fk_channel
+                    ORDER BY e.timestamp DESC
+                    """)) {
+            getAggregateMessages.setLong(1, userIdLong);
+            getAggregateMessages.setLong(2, timestamp);
+            ResultSet res = getAggregateMessages.executeQuery();
+            
+            while (res.next()) {
+                Long channelId = res.getLong("fk_channel");
+                Integer messageCount = res.getInt("message_count");
+                ret.put(channelId, messageCount);
+            }
+        } catch (SQLException e) {
+            Messaging.logException("Database", "getMessageAggregateCountsByChannelSinceTime", e);
+        }
+        
+        return ret;
     }
 
     public static ArrayList<MessageObject> getAllMessagesSinceTime(long userIdLong, long timestamp) {

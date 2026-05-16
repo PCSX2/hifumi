@@ -54,7 +54,7 @@ public class Scheduler {
     }
     
     public void addToMessageFilterFIFO(MessageFilteringRunnable runnable) {
-    	this.messageFilterFIFO.execute(runnable);
+        this.messageFilterFIFO.execute(runnable);
     }
 
     /**

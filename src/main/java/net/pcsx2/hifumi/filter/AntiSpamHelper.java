@@ -43,8 +43,8 @@ public class AntiSpamHelper implements IFilterHelper {
             ModActions.deleteMessagesMatchingSince(this.message, cooldownEpochSeconds);
 
             if (timeoutRes) {
-            	ArrayList<FileUpload> files = AttachmentUtils.getMinifiedAttachments(message);
-            	
+                ArrayList<FileUpload> files = AttachmentUtils.getMinifiedAttachments(message);
+                
                 EmbedBuilder eb = new EmbedBuilder();
                 eb.setTitle("User Automatically Timed Out");
                 eb.setDescription("User was automatically timed out for spam.");

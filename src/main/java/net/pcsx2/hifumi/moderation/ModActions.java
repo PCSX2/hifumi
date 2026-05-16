@@ -50,7 +50,7 @@ public class ModActions {
                 }
             }
         } catch (InsufficientPermissionException e) {
-        	Messaging.logInfo("ModActions", "timeoutAndNotifyUser", "Someone just tried to take a timeout action against user ID " + userIdLong + ", but that user cannot be timed out due to elevated permissions.");
+            Messaging.logInfo("ModActions", "timeoutAndNotifyUser", "Someone just tried to take a timeout action against user ID " + userIdLong + ", but that user cannot be timed out due to elevated permissions.");
         } catch (Exception e) {
             Messaging.logException("ModActions", "timeoutAndNotifyUser", e);
         }

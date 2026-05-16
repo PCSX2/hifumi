@@ -3,6 +3,7 @@ package net.pcsx2.hifumi.filter;
 import java.awt.Color;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
@@ -14,7 +15,6 @@ import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.pcsx2.hifumi.HifumiBot;
 import net.pcsx2.hifumi.database.Database;
-import net.pcsx2.hifumi.database.objects.MessageObject;
 import net.pcsx2.hifumi.moderation.ModActions;
 import net.pcsx2.hifumi.util.AttachmentUtils;
 import net.pcsx2.hifumi.util.Messaging;
@@ -85,22 +85,12 @@ public class AntiSpamHelper implements IFilterHelper {
     }
 
     private boolean reviewSpam() {
-        String rawContent = this.message.getContentRaw();
-
-        if (rawContent == null || rawContent.isEmpty()) {
-            return false;
-        }
-
-        long cooldownSeconds = HifumiBot.getSelf().getConfig().autoModOptions.cooldownSeconds;
+        long cooldownSeconds = HifumiBot.getSelf().getConfig().spamOptions.cooldownSeconds;
         OffsetDateTime cooldownSubtracted = this.message.getTimeCreated().minusSeconds(cooldownSeconds);
         long cooldownEpochSeconds = cooldownSubtracted.toEpochSecond();
-        ArrayList<MessageObject> duplicates = Database.getIdenticalMessagesSinceTime(this.message.getAuthor().getIdLong(), this.message.getContentRaw(), cooldownEpochSeconds);
+        HashMap<Long, Integer> aggregateResults = Database.getMessageAggregateCountsByChannelSinceTime(this.message.getAuthor().getIdLong(), cooldownEpochSeconds);
 
-        if (duplicates == null || duplicates.isEmpty()) {
-            return false;
-        }
-
-        if (duplicates.size() >= HifumiBot.getSelf().getConfig().spamOptions.maxMessages) {
+        if (aggregateResults.size() >= HifumiBot.getSelf().getConfig().spamOptions.maxMessages) {
             return true;
         }
 

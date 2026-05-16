@@ -173,7 +173,7 @@ public class Config implements IConfig {
         public String message;
 
         public SpamOptions() {
-            cooldownSeconds = 30;
+            cooldownSeconds = 10;
             maxMessages = 3;
             message = new String("");
         }

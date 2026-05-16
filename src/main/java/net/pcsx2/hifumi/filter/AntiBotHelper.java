@@ -1,17 +1,8 @@
-package net.pcsx2.hifumi.async;
+package net.pcsx2.hifumi.filter;
 
 import java.awt.Color;
-import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.net.URI;
-import java.net.URL;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-
-import javax.imageio.ImageIO;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -29,10 +20,11 @@ import net.pcsx2.hifumi.HifumiBot;
 import net.pcsx2.hifumi.database.Database;
 import net.pcsx2.hifumi.database.objects.MessageObject;
 import net.pcsx2.hifumi.moderation.ModActions;
+import net.pcsx2.hifumi.util.AttachmentUtils;
 import net.pcsx2.hifumi.util.Messaging;
 import net.pcsx2.hifumi.util.Strings;
 
-public class AntiBotRunnable implements Runnable {
+public class AntiBotHelper implements IFilterHelper {
 
     private static final int LINK_THRESHOLD = 3;
     private static final int DAYS_SINCE_LAST_MESSAGE = 30;
@@ -42,17 +34,18 @@ public class AntiBotRunnable implements Runnable {
     
     private ArrayList<String> links;
 
-    public AntiBotRunnable(Message message) {
+    public AntiBotHelper(Message message) {
         this.message = message;
     }
 
     @Override
-    public void run() {
+    public boolean run() {
         this.links = Strings.extractUrls(this.message.getContentRaw());
         boolean isScam = this.isImageScam();
         
         if (isScam) {
-            boolean timeoutRes = this.timeout();
+            long authorIdLong = this.message.getAuthor().getIdLong();
+            boolean timeoutRes = ModActions.timeoutAndNotifyUser(this.message.getGuild(), authorIdLong);
             
             if (timeoutRes) {
                 this.sendTimeoutNotice();
@@ -60,6 +53,8 @@ public class AntiBotRunnable implements Runnable {
                 this.sendFailNotice();
             }
         }
+        
+        return isScam;
     }
 
     private boolean isImageScam() {
@@ -82,48 +77,13 @@ public class AntiBotRunnable implements Runnable {
         return false;
     }
     
-    private boolean timeout() {
-        long authorIdLong = this.message.getAuthor().getIdLong();
-        boolean timeoutRes = ModActions.timeoutAndNotifyUser(this.message.getGuild(), authorIdLong);
-        return timeoutRes;
-    }
-    
     private void sendTimeoutNotice() {
         long authorIdLong = this.message.getAuthor().getIdLong();
         User user = this.message.getAuthor();
         
         // Since our timeout succeeded, grab some thumbnails of the images so we have something to present for review before deleting stuff.
         // If we delete the message first then attachments go too.
-        ArrayList<FileUpload> files = new ArrayList<FileUpload>();
-        
-        for (Attachment attachment : this.message.getAttachments()) {
-            // For now, just do one image... If we have problems later and need them all, yank out this if.
-            if (!files.isEmpty()) {
-                break;
-            }
-            
-            try {
-                URL url = URL.of(URI.create(attachment.getProxyUrl()), null);
-                BufferedImage img = ImageIO.read(url);
-                int width = img.getWidth() / 2, height = img.getHeight() / 2;
-                Image scaled = img.getScaledInstance(width, height, Image.SCALE_FAST);
-                BufferedImage bufImg = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-                Graphics2D graph = bufImg.createGraphics();
-                graph.drawImage(scaled, 0, 0, null);
-                graph.dispose();
-                
-                try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
-                    ImageIO.write(bufImg, "png", os);
-                    
-                    try (ByteArrayInputStream imgStream = new ByteArrayInputStream(os.toByteArray())) {
-                        FileUpload file = FileUpload.fromData(imgStream, attachment.getFileName()).asSpoiler();
-                        files.add(file);
-                    }
-                }
-            } catch (Exception e) {
-                // Squelch
-            }
-        }
+        ArrayList<FileUpload> files = AttachmentUtils.getMinifiedAttachments(message);
         
         // Sweep up any other messages the bot might have blasted out while this runnable was going.
         OffsetDateTime timeToRemoveMessagesSince = OffsetDateTime.now().minusMinutes(AGE_MINUTES_TO_REMOVE_MESSAGES);

@@ -14,6 +14,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.exceptions.InsufficientPermissionException;
 
 public class ModActions {
 
@@ -48,8 +49,10 @@ public class ModActions {
                     return true;
                 }
             }
+        } catch (InsufficientPermissionException e) {
+        	Messaging.logInfo("ModActions", "timeoutAndNotifyUser", "Someone just tried to take a timeout action against user ID " + userIdLong + ", but that user cannot be timed out due to elevated permissions.");
         } catch (Exception e) {
-            Messaging.logException("FilterHandler", "timeoutUser", e);
+            Messaging.logException("ModActions", "timeoutAndNotifyUser", e);
         }
         
         return false;

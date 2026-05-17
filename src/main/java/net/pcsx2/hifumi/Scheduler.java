@@ -27,28 +27,34 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import net.pcsx2.hifumi.filter.MessageFilteringRunnable;
 import net.pcsx2.hifumi.util.Messaging;
 
 public class Scheduler {
 
     private ScheduledExecutorService threadPool;
     private ExecutorService messageEventFIFO;
+    private ExecutorService messageFilterFIFO;
     private HashMap<String, Runnable> runnables = new HashMap<String, Runnable>();
     private HashMap<String, ScheduledFuture<?>> statuses = new HashMap<String, ScheduledFuture<?>>();
 
     public Scheduler() {
         this.threadPool = Executors.newScheduledThreadPool(6, new SchedulerThreadFactory("pool"));
         this.messageEventFIFO = Executors.newSingleThreadExecutor(new SchedulerThreadFactory("msg-evt-fifo"));
+        this.messageFilterFIFO = Executors.newSingleThreadExecutor(new SchedulerThreadFactory("msg-flt-fifo"));
     }
 
     public void addToMessageEventFIFO(Runnable runnable) {
-        this.messageEventFIFO.submit(runnable);
+        this.messageEventFIFO.execute(runnable);
+    }
+    
+    public void addToMessageFilterFIFO(MessageFilteringRunnable runnable) {
+        this.messageFilterFIFO.execute(runnable);
     }
 
     /**
@@ -56,7 +62,7 @@ public class Scheduler {
      * @param runnable
      */
     public void runOnce(Runnable runnable) {
-        this.threadPool.submit(runnable);
+        this.threadPool.execute(runnable);
     }
 
     /**

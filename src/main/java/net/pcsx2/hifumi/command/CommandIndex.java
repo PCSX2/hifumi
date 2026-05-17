@@ -25,6 +25,12 @@ package net.pcsx2.hifumi.command;
 
 import java.util.HashMap;
 
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
+import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
+import net.dv8tion.jda.api.interactions.commands.build.SubcommandGroupData;
+import net.dv8tion.jda.api.requests.restaction.CommandListUpdateAction;
 import net.pcsx2.hifumi.HifumiBot;
 import net.pcsx2.hifumi.command.context.CommandBan;
 import net.pcsx2.hifumi.command.context.CommandReverseImage;
@@ -37,6 +43,7 @@ import net.pcsx2.hifumi.command.slash.CommandAbout;
 import net.pcsx2.hifumi.command.slash.CommandBulkDelete;
 import net.pcsx2.hifumi.command.slash.CommandCPU;
 import net.pcsx2.hifumi.command.slash.CommandChartGen;
+import net.pcsx2.hifumi.command.slash.CommandConfig;
 import net.pcsx2.hifumi.command.slash.CommandDynCmd;
 import net.pcsx2.hifumi.command.slash.CommandEmulog;
 import net.pcsx2.hifumi.command.slash.CommandGPU;
@@ -58,13 +65,6 @@ import net.pcsx2.hifumi.command.slash.CommandWarez;
 import net.pcsx2.hifumi.command.slash.CommandWarezHistory;
 import net.pcsx2.hifumi.command.slash.CommandWhois;
 import net.pcsx2.hifumi.util.Messaging;
-
-import net.dv8tion.jda.api.interactions.commands.OptionType;
-import net.dv8tion.jda.api.interactions.commands.build.Commands;
-import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
-import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
-import net.dv8tion.jda.api.interactions.commands.build.SubcommandGroupData;
-import net.dv8tion.jda.api.requests.restaction.CommandListUpdateAction;
 
 public class CommandIndex {
 
@@ -122,6 +122,7 @@ public class CommandIndex {
         registerSlashCommand(new CommandWhois());
         registerSlashCommand(new CommandServerMetadata());
         registerSlashCommand(new CommandUnwarez());
+        registerSlashCommand(new CommandConfig());
     }
     
     public void rebuildMessage() {

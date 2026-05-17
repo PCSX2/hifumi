@@ -14,13 +14,11 @@ import net.dv8tion.jda.api.events.message.MessageUpdateEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.pcsx2.hifumi.EventLogging;
 import net.pcsx2.hifumi.HifumiBot;
-import net.pcsx2.hifumi.async.AntiBotRunnable;
 import net.pcsx2.hifumi.async.EntryBarrierRunnable;
-import net.pcsx2.hifumi.async.MaliciousForwardRunnable;
-import net.pcsx2.hifumi.async.SpamReviewRunnable;
 import net.pcsx2.hifumi.async.UrlChangeReviewRunnable;
 import net.pcsx2.hifumi.database.Database;
 import net.pcsx2.hifumi.database.objects.MessageObject;
+import net.pcsx2.hifumi.filter.MessageFilteringRunnable;
 import net.pcsx2.hifumi.parse.CrashParser;
 import net.pcsx2.hifumi.parse.EmulogParser;
 import net.pcsx2.hifumi.parse.PnachParser;
@@ -98,12 +96,8 @@ public class MessageEventListener extends ListenerAdapter {
                     }
                 }
 
-                // Run through anti bot checks
-                HifumiBot.getSelf().getScheduler().runOnce(new AntiBotRunnable(event.getMessage()));
-
-                // Run through the general spam review
-                HifumiBot.getSelf().getScheduler().runOnce(new SpamReviewRunnable(event.getMessage(), event.getMessage().getTimeCreated()));
-                HifumiBot.getSelf().getScheduler().runOnce(new MaliciousForwardRunnable(event.getMessage()));
+                // Run through message filters
+                HifumiBot.getSelf().getScheduler().addToMessageFilterFIFO(new MessageFilteringRunnable(event.getMessage()));
                 
                 // Notify users if they are pinging the bot
                 if (Messaging.hasBotPing(event.getMessage())) {

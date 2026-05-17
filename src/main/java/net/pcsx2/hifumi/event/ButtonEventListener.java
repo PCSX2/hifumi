@@ -132,8 +132,8 @@ public class ButtonEventListener extends ListenerAdapter {
                                     event.reply("Messaged user telling them we think they are a bot, and kicked them from the server.").setComponents(new ArrayList<MessageTopLevelComponent>()).setEphemeral(true).queue();
                                     Button button = Button.of(ButtonStyle.PRIMARY, "imagescam:resolved:" + userIdLong, "Resolved by " + event.getUser().getEffectiveName() + " (kicked user)");
                                     ActionRow actionRow = ActionRow.of(button);
-                                    event.getHook().editMessageComponentsById(event.getMessageId(), actionRow).queue();
-                                    event.getMessage().editMessageAttachments(List.of()).queue();
+                                    event.getHook().editMessageComponentsById(event.getMessageId(), actionRow).complete();
+                                    event.getMessage().editMessageAttachments(List.of()).complete();
                                 }
                                 case "clear" -> {
                                     Optional<Member> memberOpt = MemberUtils.getOrRetrieveMember(event.getGuild(), userIdLong);
@@ -148,8 +148,8 @@ public class ButtonEventListener extends ListenerAdapter {
                                     
                                     Button button = Button.of(ButtonStyle.PRIMARY, "imagescam:resolved:" + userIdLong, "Resolved by " + event.getUser().getEffectiveName() + " (removed timeout)");
                                     ActionRow actionRow = ActionRow.of(button);
-                                    event.getHook().editMessageComponentsById(event.getMessageId(), actionRow).queue();
-                                    event.getMessage().editMessageAttachments(List.of()).queue();
+                                    event.getHook().editMessageComponentsById(event.getMessageId(), actionRow).complete();
+                                    event.getMessage().editMessageAttachments(List.of()).complete();
                                 }
                                 case "resolved" -> {
                                     event.reply("This event has already been resolved.").setEphemeral(true).queue();

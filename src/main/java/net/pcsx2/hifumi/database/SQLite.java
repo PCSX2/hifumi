@@ -10,17 +10,23 @@ import net.pcsx2.hifumi.util.Messaging;
 
 public class SQLite {
 
-    private Connection connection;
+    private Connection readConnection;
+    private Connection writeConnection;
 
     public SQLite(String dataDirectory) {
         try {
             // NOTE: this shouldn't be needed for modern versions of java, it should just dynamically look
             // at the classpath for you, but leaving it here incase im wrong
             // Class.forName("org.sqlite.JDBC");
-            var jbdcString = String.format("jdbc:sqlite:%s/hifumibot.db", dataDirectory);
-            Log.info("Opening database with JBDC string: " + jbdcString);
-            this.connection = DriverManager.getConnection(jbdcString);
-            ensureDatabaseIsInitialized();
+            var jdbcString = String.format("jdbc:sqlite:%s/hifumibot.db", dataDirectory);
+            
+            Log.info("Opening read connection with JBDC string: " + jdbcString);
+            this.readConnection = DriverManager.getConnection(jdbcString);
+            this.ensureDatabaseIsInitialized(this.readConnection);
+            
+            Log.info("Opening write connection with JDBC string: " + jdbcString);
+            this.writeConnection = DriverManager.getConnection(jdbcString);
+            this.ensureDatabaseIsInitialized(this.writeConnection);
         } catch (Exception e) {
             Messaging.logException("SQlite", "(constructor)", e);
         }
@@ -48,8 +54,7 @@ public class SQLite {
         "016-create-automod-event-table.sql"
     };
 
-    private void ensureDatabaseIsInitialized() {
-        var conn = this.connection;
+    private void ensureDatabaseIsInitialized(Connection conn) {
         try {
             conn.setAutoCommit(false); // begin transaction
             for (var migrationFile : schemaMigrations) {
@@ -76,13 +81,23 @@ public class SQLite {
         }
     }
 
-    public Connection getConnection() {
-        return this.connection;
+    public Connection getReadConnection() {
+        return this.readConnection;
+    }
+    
+    public Connection getWriteConnection() {
+        return this.writeConnection;
     }
 
     public void shutdown() {
         try {
-            this.connection.close();
+            this.readConnection.close();
+        } catch (SQLException e) {
+            Messaging.logException("SQLite", "shutdown", e);
+        }
+        
+        try {
+            this.writeConnection.close();
         } catch (SQLException e) {
             Messaging.logException("SQLite", "shutdown", e);
         }

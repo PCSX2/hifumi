@@ -49,6 +49,15 @@ public class MessageEventListener extends ListenerAdapter {
             String hifumiUserId = HifumiBot.getSelf().getJDA().getSelfUser().getId();
             boolean isHifumi = event.getAuthor().getId().equals(hifumiUserId);
             
+            
+            // Check if the referenced message exists in the database; if not, try to add it first.
+            // Do this here so that read and write conns are not blocking waiting for one another.
+            if (event.getMessage().getReferencedMessage() != null) {
+                if (Database.getLatestMessage(event.getMessage().getReferencedMessage().getIdLong()) == null) {
+                    Database.insertMessage(event.getMessage().getReferencedMessage());
+                }
+            }
+            
             Database.insertMessage(event.getMessage());
 
             // If the sender was the bot, do not process any further.

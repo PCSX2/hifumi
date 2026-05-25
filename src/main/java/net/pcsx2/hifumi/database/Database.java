@@ -48,10 +48,10 @@ public class Database {
      * Store user, channel, message, attachment, and event records
      */
     public static void insertMessage(Message message) {
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
 
         try {
-            PreparedStatement insertUser = conn.prepareStatement("""
+            PreparedStatement insertUser = wConn.prepareStatement("""
                     INSERT INTO user (discord_id, created_datetime, username)
                     VALUES (?, ?, ?)
                     ON CONFLICT (discord_id) DO NOTHING;
@@ -62,7 +62,7 @@ public class Database {
             insertUser.executeUpdate();
             insertUser.close();
 
-            PreparedStatement insertChannel = conn.prepareStatement("""
+            PreparedStatement insertChannel = wConn.prepareStatement("""
                     INSERT INTO channel (discord_id, name)
                     VALUES (?, ?)
                     ON CONFLICT (discord_id) DO NOTHING;
@@ -72,14 +72,7 @@ public class Database {
             insertChannel.executeUpdate();
             insertChannel.close();
 
-            // Check if the referenced message exists in the database; if not, try to add it first.
-            if (message.getReferencedMessage() != null) {
-                if (Database.getLatestMessage(message.getReferencedMessage().getIdLong()) == null) {
-                    Database.insertMessage(message.getReferencedMessage());
-                }
-            }
-
-            PreparedStatement insertMessage = conn.prepareStatement("""
+            PreparedStatement insertMessage = wConn.prepareStatement("""
                     INSERT INTO message (message_id, fk_channel, jump_link, fk_reply_to_message, timestamp, fk_user)
                     VALUES (?, ?, ?, ?, ?, ?)
                     ON CONFLICT (message_id) DO NOTHING;
@@ -100,7 +93,7 @@ public class Database {
             insertMessage.close();
 
             if (!HifumiBot.getSelf().getPermissionManager().hasMessageLogBypass(message)) {
-                PreparedStatement insertEvent = conn.prepareStatement("""
+                PreparedStatement insertEvent = wConn.prepareStatement("""
                         INSERT INTO message_event (fk_user, fk_message, timestamp, action, content)
                         VALUES (?, ?, ?, ?, ?);
                         """);
@@ -116,7 +109,7 @@ public class Database {
                 List<Attachment> attachments = message.getAttachments();
 
                 if (!attachments.isEmpty()) {
-                    PreparedStatement insertAttachments = conn.prepareStatement("""
+                    PreparedStatement insertAttachments = wConn.prepareStatement("""
                             INSERT INTO message_attachment (discord_id, timestamp, fk_message, content_type, proxy_url, filename)
                             VALUES (?, ?, ?, ?, ?, ?)
                             ON CONFLICT (discord_id) DO NOTHING;
@@ -147,13 +140,14 @@ public class Database {
      */
     public static void insertMessageDeleteEvent(MessageDeleteEvent event) {
         OffsetDateTime now = OffsetDateTime.now();
-        Connection conn = null;
+        Connection rConn = null;
+        Connection wConn = null;
         long userId = 0;
 
         try {
-            conn = HifumiBot.getSelf().getSQLite().getConnection();
+            rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
-            PreparedStatement getUser = conn.prepareStatement("""
+            PreparedStatement getUser = rConn.prepareStatement("""
                     SELECT fk_user, fk_message
                     FROM message_event
                     WHERE fk_message = ?
@@ -167,8 +161,10 @@ public class Database {
             }
             
             getUser.close();
+            
+            wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
 
-            PreparedStatement insertChannel = conn.prepareStatement("""
+            PreparedStatement insertChannel = wConn.prepareStatement("""
                     INSERT INTO channel (discord_id, name)
                     VALUES (?, ?)
                     ON CONFLICT (discord_id) DO NOTHING;
@@ -178,7 +174,7 @@ public class Database {
             insertChannel.executeUpdate();
             insertChannel.close();
 
-            PreparedStatement insertMessage = conn.prepareStatement("""
+            PreparedStatement insertMessage = wConn.prepareStatement("""
                     INSERT INTO message (message_id, fk_channel)
                     VALUES (?, ?)
                     ON CONFLICT (message_id) DO NOTHING;
@@ -188,7 +184,7 @@ public class Database {
             insertMessage.executeUpdate();
             insertMessage.close();
 
-            PreparedStatement insertEvent = conn.prepareStatement("""
+            PreparedStatement insertEvent = wConn.prepareStatement("""
                     INSERT INTO message_event (fk_user, fk_message, timestamp, action)
                     VALUES (?, ?, ?, ?);
                     """);
@@ -211,13 +207,14 @@ public class Database {
         OffsetDateTime now = OffsetDateTime.now();
         
         for (String messageId : event.getMessageIds()) {
-            Connection conn = null;
+            Connection rConn = null;
+            Connection wConn = null;
             long userId = 0;
 
             try {
-                conn = HifumiBot.getSelf().getSQLite().getConnection();
+                rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
-                PreparedStatement getUser = conn.prepareStatement("""
+                PreparedStatement getUser = rConn.prepareStatement("""
                         SELECT fk_user, fk_message
                         FROM message_event
                         WHERE fk_message = ?
@@ -231,8 +228,10 @@ public class Database {
                 }
                 
                 getUser.close();
+                
+                wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
 
-                PreparedStatement insertChannel = conn.prepareStatement("""
+                PreparedStatement insertChannel = wConn.prepareStatement("""
                         INSERT INTO channel (discord_id, name)
                         VALUES (?, ?)
                         ON CONFLICT (discord_id) DO NOTHING;
@@ -242,7 +241,7 @@ public class Database {
                 insertChannel.executeUpdate();
                 insertChannel.close();
 
-                PreparedStatement insertMessage = conn.prepareStatement("""
+                PreparedStatement insertMessage = wConn.prepareStatement("""
                         INSERT INTO message (message_id, fk_channel)
                         VALUES (?, ?)
                         ON CONFLICT (message_id) DO NOTHING;
@@ -252,7 +251,7 @@ public class Database {
                 insertMessage.executeUpdate();
                 insertMessage.close();
 
-                PreparedStatement insertEvent = conn.prepareStatement("""
+                PreparedStatement insertEvent = wConn.prepareStatement("""
                         INSERT INTO message_event (fk_user, fk_message, timestamp, action)
                         VALUES (?, ?, ?, ?);
                         """);
@@ -273,10 +272,10 @@ public class Database {
      * @param event
      */
     public static void insertMessageUpdateEvent(MessageUpdateEvent event) {
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
 
         try {
-            PreparedStatement insertUser = conn.prepareStatement("""
+            PreparedStatement insertUser = wConn.prepareStatement("""
                     INSERT INTO user (discord_id, created_datetime, username)
                     VALUES (?, ?, ?)
                     ON CONFLICT (discord_id) DO NOTHING;
@@ -287,7 +286,7 @@ public class Database {
             insertUser.executeUpdate();
             insertUser.close();
 
-            PreparedStatement insertChannel = conn.prepareStatement("""
+            PreparedStatement insertChannel = wConn.prepareStatement("""
                     INSERT INTO channel (discord_id, name)
                     VALUES (?, ?)
                     ON CONFLICT (discord_id) DO NOTHING;
@@ -297,7 +296,7 @@ public class Database {
             insertChannel.executeUpdate();
             insertChannel.close();
 
-            PreparedStatement insertMessage = conn.prepareStatement("""
+            PreparedStatement insertMessage = wConn.prepareStatement("""
                     INSERT INTO message (message_id, fk_channel, fk_user)
                     VALUES (?, ?, ?)
                     ON CONFLICT (message_id) DO NOTHING;
@@ -312,7 +311,7 @@ public class Database {
                 List<Attachment> attachments = event.getMessage().getAttachments();
 
                 if (!attachments.isEmpty()) {
-                    PreparedStatement insertAttachment = conn.prepareStatement("""
+                    PreparedStatement insertAttachment = wConn.prepareStatement("""
                             INSERT INTO message_attachment (discord_id, timestamp, fk_message, content_type, proxy_url)
                             VALUES (?, ?, ?, ?, ?)
                             ON CONFLICT (discord_id) DO NOTHING;
@@ -331,7 +330,7 @@ public class Database {
                     insertAttachment.close();
                 }
 
-                PreparedStatement insertEvent = conn.prepareStatement("""
+                PreparedStatement insertEvent = wConn.prepareStatement("""
                         INSERT INTO message_event (fk_user, fk_message, timestamp, action, content)
                         VALUES (?, ?, ?, ?, ?);
                         """);
@@ -354,11 +353,11 @@ public class Database {
 
     public static MessageObject getOriginalMessage(long messageIdLong) {
         MessageObject ret = null;
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
             // First get the original sent message
-            PreparedStatement getSendEvent = conn.prepareStatement("""
+            PreparedStatement getSendEvent = rConn.prepareStatement("""
                     SELECT
                         e.id, e.fk_user, e.fk_message, e.content, e.timestamp,
                         m.fk_channel, m.jump_link, m.fk_reply_to_message
@@ -375,7 +374,7 @@ public class Database {
             // If we got a hit...
             if (originalSendEvent.next()) {
                 // ... then look for attachments
-                PreparedStatement getAttachments = conn.prepareStatement("""
+                PreparedStatement getAttachments = rConn.prepareStatement("""
                         SELECT discord_id, timestamp, fk_message, content_type, proxy_url, filename
                         FROM message_attachment
                         WHERE fk_message = ?;
@@ -425,11 +424,11 @@ public class Database {
 
     public static MessageObject getLatestMessage(long messageIdLong) {
         MessageObject ret = null;
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
             // First get the latest revision of the message
-            PreparedStatement getMessageEvent = conn.prepareStatement("""
+            PreparedStatement getMessageEvent = rConn.prepareStatement("""
                     SELECT
                         e.id, e.fk_user, e.fk_message, e.content, e.timestamp, e.action,
                         m.fk_channel, m.jump_link, m.fk_reply_to_message
@@ -449,7 +448,7 @@ public class Database {
             // If we got a hit...
             if (latestEvent.next()) {
                 // ... then look for attachments
-                PreparedStatement getAttachments = conn.prepareStatement("""
+                PreparedStatement getAttachments = rConn.prepareStatement("""
                         SELECT discord_id, timestamp, fk_message, content_type, proxy_url, filename
                         FROM message_attachment
                         WHERE fk_message = ?;
@@ -497,11 +496,11 @@ public class Database {
 
     public static ArrayList<MessageObject> getAllMessageRevisions(long messageIdLong) {
         ArrayList<MessageObject> ret = new ArrayList<MessageObject>();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
             // First get the latest revision of the message
-            PreparedStatement getMessageEvent = conn.prepareStatement("""
+            PreparedStatement getMessageEvent = rConn.prepareStatement("""
                     SELECT
                         e.id, e.fk_user, e.fk_message, e.content, e.timestamp AS e_timestamp, e.action,
                         m.fk_channel, m.jump_link, m.fk_reply_to_message, m.timestamp AS m_timestamp
@@ -520,7 +519,7 @@ public class Database {
             // If we got a hit...
             while (latestEvent.next()) {
                 // ... then look for attachments
-                PreparedStatement getAttachments = conn.prepareStatement("""
+                PreparedStatement getAttachments = rConn.prepareStatement("""
                         SELECT discord_id, timestamp, fk_message, content_type, proxy_url, filename
                         FROM message_attachment
                         WHERE fk_message = ?;
@@ -568,11 +567,11 @@ public class Database {
 
     public static ArrayList<MessageObject> getIdenticalMessagesSinceTime(long userIdLong, String contentRaw, long timestamp) {
         ArrayList<MessageObject> ret = new ArrayList<MessageObject>();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
             // First get the latest revision of the message
-            PreparedStatement getMessageEvents = conn.prepareStatement("""
+            PreparedStatement getMessageEvents = rConn.prepareStatement("""
                     SELECT
                         e.id, e.fk_user, e.fk_message, e.content, e.timestamp,
                         m.fk_channel, m.jump_link, m.fk_reply_to_message
@@ -616,11 +615,11 @@ public class Database {
 
     public static MessageObject getIdenticalMessageSinceTimeInOtherChannel(long userIdLong, String contentRaw, long timestamp, long channelIdLong) {
         MessageObject ret = null;
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
             // First get the latest revision of the message
-            PreparedStatement getMessageEvents = conn.prepareStatement("""
+            PreparedStatement getMessageEvents = rConn.prepareStatement("""
                     SELECT
                         e.id, e.fk_user, e.fk_message, e.content, e.timestamp,
                         m.fk_channel, m.jump_link, m.fk_reply_to_message
@@ -671,9 +670,9 @@ public class Database {
     
     public static HashMap<Long, Integer> getMessageAggregateCountsByChannelSinceTime(long userIdLong, long timestamp) {
         HashMap<Long, Integer> ret = new HashMap<Long, Integer>();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
         
-        try (PreparedStatement getAggregateMessages = conn.prepareStatement("""
+        try (PreparedStatement getAggregateMessages = rConn.prepareStatement("""
                     SELECT
                         COUNT(m.message_id) AS message_count, m.fk_channel
                     FROM message_event AS e
@@ -702,11 +701,11 @@ public class Database {
 
     public static ArrayList<MessageObject> getAllMessagesSinceTime(long userIdLong, long timestamp) {
         ArrayList<MessageObject> ret = new ArrayList<MessageObject>();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
             // First get the latest revision of the message
-            PreparedStatement getMessageEvents = conn.prepareStatement("""
+            PreparedStatement getMessageEvents = rConn.prepareStatement("""
                     SELECT
                         e.id, e.fk_user, e.fk_message, e.content, e.timestamp,
                         m.fk_channel, m.jump_link, m.fk_reply_to_message
@@ -747,12 +746,12 @@ public class Database {
     }
 
     public static boolean insertWarezEvent(WarezEventObject warezEvent) {
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
 
         try {
             User usr = HifumiBot.getSelf().getJDA().retrieveUserById(warezEvent.getUserId()).complete();
 
-            PreparedStatement insertUser = conn.prepareStatement("""
+            PreparedStatement insertUser = wConn.prepareStatement("""
                     INSERT INTO user (discord_id, created_datetime, username)
                     VALUES (?, ?, ?)
                     ON CONFLICT (discord_id) DO NOTHING;
@@ -763,7 +762,7 @@ public class Database {
             insertUser.executeUpdate();
             insertUser.close();
 
-            PreparedStatement insertWarez = conn.prepareStatement("""
+            PreparedStatement insertWarez = wConn.prepareStatement("""
                     INSERT INTO warez_event (timestamp, fk_user, action, fk_message)
                     VALUES (?, ?, ?, ?);
                     """);
@@ -790,10 +789,10 @@ public class Database {
 
     public static Optional<WarezEventObject> getLatestWarezAction(long userIdLong) {
         Optional<WarezEventObject> ret = Optional.empty();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
-            PreparedStatement getWarezEvent = conn.prepareStatement("""
+            PreparedStatement getWarezEvent = rConn.prepareStatement("""
                     SELECT timestamp, fk_user, action, fk_message
                     FROM warez_event
                     WHERE fk_user = ?
@@ -824,10 +823,10 @@ public class Database {
 
     public static ArrayList<WarezEventObject> getAllWarezActionsForUser(long userIdLong) {
         ArrayList<WarezEventObject> ret = new ArrayList<WarezEventObject>();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
-            PreparedStatement getWarezEvents = conn.prepareStatement("""
+            PreparedStatement getWarezEvents = rConn.prepareStatement("""
                     SELECT e.timestamp, e.fk_user, e.action, e.fk_message, m.content, m.action AS message_action, COUNT(a.discord_id) AS attachments
                     FROM warez_event AS e
                     LEFT JOIN message_event AS m ON e.fk_message = m.fk_message
@@ -861,7 +860,7 @@ public class Database {
 
     public static ArrayList<ArrayList<WarezEventObject>> getAllWarezActionsForUserPaginated(long userIdLong) {
         ArrayList<ArrayList<WarezEventObject>> ret = new ArrayList<ArrayList<WarezEventObject>>();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
             boolean isEmpty = false;
@@ -869,7 +868,7 @@ public class Database {
             int rowsReturned = 0;
 
             do { 
-                PreparedStatement getWarezEvents = conn.prepareStatement("""
+                PreparedStatement getWarezEvents = rConn.prepareStatement("""
                     SELECT e.timestamp, e.fk_user, e.action, e.fk_message, m.content, m.action AS message_action, COUNT(a.discord_id) AS attachments
                     FROM warez_event AS e
                     LEFT JOIN message_event AS m ON e.fk_message = m.fk_message
@@ -918,11 +917,11 @@ public class Database {
 
     public static ArrayList<WarezChartData> getWarezAssignmentsBetween(long startTimestamp, long endTimestamp, String timeUnit) {
         ArrayList<WarezChartData> ret = new ArrayList<WarezChartData>();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
         String formatStr = TimeUtils.getSQLFormatStringFromTimeUnit(timeUnit);
         
         try {
-            PreparedStatement getWarezEvent = conn.prepareStatement("""
+            PreparedStatement getWarezEvent = rConn.prepareStatement("""
                     SELECT COUNT(timestamp) AS events, STRFTIME(?, DATETIME(timestamp, 'unixepoch')) AS timeUnit, action
                     FROM warez_event
                     WHERE timestamp >= ?
@@ -953,10 +952,10 @@ public class Database {
     }
 
     public static void insertMemberJoinEvent(GuildMemberJoinEvent event) {
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
 
         try {            
-            PreparedStatement insertUser = conn.prepareStatement("""
+            PreparedStatement insertUser = wConn.prepareStatement("""
                     INSERT INTO user (discord_id, created_datetime, username)
                     VALUES (?, ?, ?)
                     ON CONFLICT (discord_id) DO NOTHING;
@@ -967,7 +966,7 @@ public class Database {
             insertUser.executeUpdate();
             insertUser.close();
 
-            PreparedStatement insertEvent = conn.prepareStatement("""
+            PreparedStatement insertEvent = wConn.prepareStatement("""
                     INSERT INTO member_event (timestamp, fk_user, action)
                     VALUES (?, ?, ?);
                     """);
@@ -983,10 +982,10 @@ public class Database {
 
     public static ArrayList<MemberEventObject> getRecentMemberEvents(long userId) {
         ArrayList<MemberEventObject> ret = new ArrayList<MemberEventObject>();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
-            PreparedStatement events = conn.prepareStatement("""
+            PreparedStatement events = rConn.prepareStatement("""
                     SELECT timestamp, fk_user, action
                     FROM member_event
                     WHERE fk_user = ?
@@ -1015,7 +1014,7 @@ public class Database {
 
     public static ArrayList<ArrayList<MemberEventObject>> getAllMemberEventsPaginated(long userId) {
         ArrayList<ArrayList<MemberEventObject>> ret = new ArrayList<ArrayList<MemberEventObject>>();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
             boolean isEmpty = false;
@@ -1023,7 +1022,7 @@ public class Database {
             int rowsReturned = 0;
             
             do {
-                PreparedStatement events = conn.prepareStatement("""
+                PreparedStatement events = rConn.prepareStatement("""
                     SELECT timestamp, fk_user, action
                     FROM member_event
                     WHERE fk_user = ?
@@ -1065,11 +1064,11 @@ public class Database {
 
     public static ArrayList<MemberChartData> getMemberEventsBetween(long startTimestamp, long endTimestamp, String timeUnit) {
         ArrayList<MemberChartData> ret = new ArrayList<MemberChartData>();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
         String formatStr = TimeUtils.getSQLFormatStringFromTimeUnit(timeUnit);
 
         try {
-            PreparedStatement events = conn.prepareStatement("""
+            PreparedStatement events = rConn.prepareStatement("""
                     SELECT COUNT(timestamp) AS events, STRFTIME(?, DATETIME(timestamp, 'unixepoch')) AS timeUnit, action
                     FROM member_event
                     WHERE timestamp >= ?
@@ -1105,10 +1104,10 @@ public class Database {
     }
 
     public static void insertMemberRemoveEvent(GuildMemberRemoveEvent event, OffsetDateTime time) {
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
 
         try {            
-            PreparedStatement insertUser = conn.prepareStatement("""
+            PreparedStatement insertUser = wConn.prepareStatement("""
                     INSERT INTO user (discord_id, created_datetime, username)
                     VALUES (?, ?, ?)
                     ON CONFLICT (discord_id) DO NOTHING;
@@ -1119,7 +1118,7 @@ public class Database {
             insertUser.executeUpdate();
             insertUser.close();
 
-            PreparedStatement insertEvent = conn.prepareStatement("""
+            PreparedStatement insertEvent = wConn.prepareStatement("""
                     INSERT INTO member_event (timestamp, fk_user, action)
                     VALUES (?, ?, ?);
                     """);
@@ -1134,10 +1133,10 @@ public class Database {
     }
 
     public static void insertMemberBanEvent(GuildBanEvent event, OffsetDateTime time) {
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
 
         try {
-            PreparedStatement insertUser = conn.prepareStatement("""
+            PreparedStatement insertUser = wConn.prepareStatement("""
                     INSERT INTO user (discord_id, created_datetime, username)
                     VALUES (?, ?, ?) ON CONFLICT (discord_id) DO NOTHING;
                     """);
@@ -1147,7 +1146,7 @@ public class Database {
             insertUser.executeUpdate();
             insertUser.close();
 
-            PreparedStatement insertEvent = conn.prepareStatement("""
+            PreparedStatement insertEvent = wConn.prepareStatement("""
                     INSERT INTO member_event (timestamp, fk_user, action)
                     VALUES (?, ?, ?);
                     """);
@@ -1166,7 +1165,7 @@ public class Database {
      * @param automodEvent
      */
     public static void insertAutoModEvent(AutoModExecutionEvent event, OffsetDateTime time) {
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
 
         try {
             // First, try to fetch the user who triggered the event.
@@ -1177,7 +1176,7 @@ public class Database {
                 User user = userOpt.get();
 
                 // Log them first
-                PreparedStatement insertUser = conn.prepareStatement("""
+                PreparedStatement insertUser = wConn.prepareStatement("""
                         INSERT INTO user (discord_id, created_datetime, username)
                         VALUES (?, ?, ?)
                         ON CONFLICT (discord_id) DO NOTHING;
@@ -1189,7 +1188,7 @@ public class Database {
                 insertUser.close();
 
                 // Then use that to also log the triggering message
-                PreparedStatement insertMessage = conn.prepareStatement("""
+                PreparedStatement insertMessage = wConn.prepareStatement("""
                         INSERT INTO message (message_id, fk_channel, fk_user)
                         VALUES (?, ?, ?)
                         ON CONFLICT (message_id) DO NOTHING;
@@ -1201,7 +1200,7 @@ public class Database {
                 insertMessage.close();
             }
 
-            PreparedStatement insertAutoModEvent = conn.prepareStatement("""
+            PreparedStatement insertAutoModEvent = wConn.prepareStatement("""
                     INSERT INTO automod_event (fk_user, fk_message, fk_channel, alert_message_id, rule_id, timestamp, trigger, content, matched_content, matched_keyword, response_type)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                     """);
@@ -1242,11 +1241,11 @@ public class Database {
 
     public static ArrayList<AutoModEventObject> getAutoModEventsSinceTime(long userIdLong, OffsetDateTime time) {
         ArrayList<AutoModEventObject> ret = new ArrayList<AutoModEventObject>();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
             // First get the latest revision of the message
-            PreparedStatement getFilterEvent = conn.prepareStatement("""
+            PreparedStatement getFilterEvent = rConn.prepareStatement("""
                     SELECT
                     fk_user, fk_message, fk_channel, alert_message_id, rule_id, timestamp, trigger, content, matched_content, matched_keyword, response_type
                     FROM automod_event
@@ -1289,11 +1288,11 @@ public class Database {
 
     public static ArrayList<AutoModEventObject> getAllAutoModEvents(long userIdLong) {
         ArrayList<AutoModEventObject> ret = new ArrayList<AutoModEventObject>();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
             // First get the latest revision of the message
-            PreparedStatement getFilterEvent = conn.prepareStatement("""
+            PreparedStatement getFilterEvent = rConn.prepareStatement("""
                     SELECT
                     fk_user, fk_message, fk_channel, alert_message_id, rule_id, timestamp, trigger, content, matched_content, matched_keyword, response_type
                     FROM automod_event
@@ -1338,7 +1337,7 @@ public class Database {
 
     public static ArrayList<ArrayList<AutoModEventObject>> getAllAutoModEventsPaginated(long userIdLong) {
         ArrayList<ArrayList<AutoModEventObject>> ret = new ArrayList<ArrayList<AutoModEventObject>>();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
             boolean isEmpty = false;
@@ -1346,7 +1345,7 @@ public class Database {
             int rowsReturned = 0;
 
             do { 
-                PreparedStatement getAutoModEvents = conn.prepareStatement("""
+                PreparedStatement getAutoModEvents = rConn.prepareStatement("""
                         SELECT
                         fk_user, fk_message, fk_channel, alert_message_id, rule_id, timestamp, trigger, content, matched_content, matched_keyword, response_type
                         FROM automod_event
@@ -1403,10 +1402,10 @@ public class Database {
     }
 
     public static void insertCounter(String type, long timestamp, long value) {
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
 
         try {
-            PreparedStatement insertCounter = conn.prepareStatement("""
+            PreparedStatement insertCounter = wConn.prepareStatement("""
                     INSERT INTO counter (type, timestamp, value)
                     VALUES (?, ?, ?);
                     """);
@@ -1423,11 +1422,11 @@ public class Database {
 
     public static CounterObject getLatestCounter(String type) {
         CounterObject ret = null;
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
             // First get the latest revision of the message
-            PreparedStatement getCounter = conn.prepareStatement("""
+            PreparedStatement getCounter = rConn.prepareStatement("""
                     SELECT
                     type, timestamp, value
                     FROM counter
@@ -1455,10 +1454,10 @@ public class Database {
     }
 
     public static void insertCommandEvent(long commandIdLong, String type, String name, String group, String sub, long eventIdLong, User user, long channelIdLong, long timestamp, boolean ninja, List<OptionMapping> options) {
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
 
         try {
-            PreparedStatement insertUser = conn.prepareStatement("""
+            PreparedStatement insertUser = wConn.prepareStatement("""
                     INSERT INTO user (discord_id, created_datetime, username)
                     VALUES (?, ?, ?)
                     ON CONFLICT (discord_id) DO NOTHING;
@@ -1469,7 +1468,7 @@ public class Database {
             insertUser.executeUpdate();
             insertUser.close();
 
-            PreparedStatement insertCommand = conn.prepareStatement("""
+            PreparedStatement insertCommand = wConn.prepareStatement("""
                     INSERT INTO command (discord_id, type, name, subgroup, subcmd)
                     VALUES (?, ?, ?, ?, ?)
                     ON CONFLICT (discord_id) DO NOTHING;
@@ -1483,7 +1482,7 @@ public class Database {
             insertCommand.executeUpdate();
             insertCommand.close();
 
-            PreparedStatement insertCommandEvent = conn.prepareStatement("""
+            PreparedStatement insertCommandEvent = wConn.prepareStatement("""
                     INSERT INTO command_event (discord_id, command_fk, user_fk, channel_fk, timestamp, ninja)
                     VALUES (?, ?, ?, ?, ?, ?);
                     """);
@@ -1516,7 +1515,7 @@ public class Database {
 
             sb.append(";");
 
-            PreparedStatement insertOptions = conn.prepareStatement(sb.toString());
+            PreparedStatement insertOptions = wConn.prepareStatement(sb.toString());
             int counter = 1;
 
             for (OptionMapping opt : options) {
@@ -1542,11 +1541,11 @@ public class Database {
      */
     public static Optional<CommandEventObject> getLatestCommandEventNotFromUser(long channelIdLong, long commandIdLong, long userIdLong) {
         Optional<CommandEventObject> ret = Optional.empty();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
             // First get the latest revision of the message
-            PreparedStatement getCommandEvent = conn.prepareStatement("""
+            PreparedStatement getCommandEvent = rConn.prepareStatement("""
                     SELECT e.discord_id, e.command_fk, e.user_fk, e.timestamp
                     FROM command_event AS e
                     INNER JOIN command AS c ON c.discord_id = e.command_fk
@@ -1585,11 +1584,11 @@ public class Database {
 
     public static ArrayList<AutomodChartData> getAutomodEventsBetween(long startTimestamp, long endTimestamp, String timeUnit) {
         ArrayList<AutomodChartData> ret = new ArrayList<AutomodChartData>();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
         String formatStr = TimeUtils.getSQLFormatStringFromTimeUnit(timeUnit);
         
         try {
-            PreparedStatement getAutomodEvents = conn.prepareStatement("""
+            PreparedStatement getAutomodEvents = rConn.prepareStatement("""
                     SELECT COUNT(timestamp) AS events, STRFTIME(?, DATETIME(timestamp, 'unixepoch')) AS timeUnit, trigger
                     FROM automod_event
                     WHERE timestamp >= ?
@@ -1620,10 +1619,10 @@ public class Database {
     }
 
     public static void insertUsernameChangeEvent(UserUpdateNameEvent event) {
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
 
         try {
-            PreparedStatement insertUser = conn.prepareStatement("""
+            PreparedStatement insertUser = wConn.prepareStatement("""
                     INSERT INTO user (discord_id, created_datetime, username)
                     VALUES (?, ?, ?)
                     ON CONFLICT (discord_id) DO NOTHING;
@@ -1634,7 +1633,7 @@ public class Database {
             insertUser.executeUpdate();
             insertUser.close();
 
-            PreparedStatement insertUsernameEvent = conn.prepareStatement("""
+            PreparedStatement insertUsernameEvent = wConn.prepareStatement("""
                     INSERT INTO user_username_event (fk_user, old_username, new_username)
                     VALUES (?, ?, ?);
                     """);
@@ -1649,10 +1648,10 @@ public class Database {
     }
 
     public static void insertDisplayNameChangeEvent(UserUpdateGlobalNameEvent event) {
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
 
         try {
-            PreparedStatement insertUser = conn.prepareStatement("""
+            PreparedStatement insertUser = wConn.prepareStatement("""
                     INSERT INTO user (discord_id, created_datetime, username)
                     VALUES (?, ?, ?)
                     ON CONFLICT (discord_id) DO NOTHING;
@@ -1663,7 +1662,7 @@ public class Database {
             insertUser.executeUpdate();
             insertUser.close();
 
-            PreparedStatement insertDisplayNameEvent = conn.prepareStatement("""
+            PreparedStatement insertDisplayNameEvent = wConn.prepareStatement("""
                     INSERT INTO user_displayname_event (fk_user, old_displayname, new_displayname)
                     VALUES (?, ?, ?);
                     """);
@@ -1678,10 +1677,10 @@ public class Database {
     }
 
     public static void insertInteractionEvent(long eventId, long timestamp, long userId) {
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
 
         try {
-            PreparedStatement insertInteractionEvent = conn.prepareStatement("""
+            PreparedStatement insertInteractionEvent = wConn.prepareStatement("""
                     INSERT INTO interaction_event (id, timestamp, user_fk)
                     VALUES (?, ?, ?);
                     """);
@@ -1697,11 +1696,11 @@ public class Database {
 
     public static Optional<InteractionEventObject> getInteractionEvent(long eventId, long userId) {
         Optional<InteractionEventObject> ret = Optional.empty();
-        Connection conn = HifumiBot.getSelf().getSQLite().getConnection();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
 
         try {
             // First get the latest revision of the message
-            PreparedStatement getInteractionEvent = conn.prepareStatement("""
+            PreparedStatement getInteractionEvent = rConn.prepareStatement("""
                     SELECT id, timestamp, user_fk
                     FROM interaction_event
                     WHERE id = ?

@@ -58,7 +58,7 @@ public class RoleEventListener extends ListenerAdapter {
                             WarezEventObject.Action.ADD,
                             null
                         );
-                        Database.insertWarezEvent(warezEvent);    
+                        Database.insertWarezEvent(warezEvent, event.getUser());
                     }
                     
                     return;
@@ -85,7 +85,7 @@ public class RoleEventListener extends ListenerAdapter {
                             WarezEventObject.Action.REMOVE,
                             null
                         );
-                        Database.insertWarezEvent(warezEvent);    
+                        Database.insertWarezEvent(warezEvent, event.getUser());
                     }
                     
                     return;

@@ -46,7 +46,7 @@ public class WarezUtil {
                 messageOpt.isPresent() ? messageOpt.get().getIdLong() : null
             );
 
-            if (!Database.insertWarezEvent(warezEvent)) {
+            if (!Database.insertWarezEvent(warezEvent, user)) {
                 event.getHook()
                     .sendMessage("Warez record could not be stored (SQL error occurred, check logs for details)")
                     .setEphemeral(true)

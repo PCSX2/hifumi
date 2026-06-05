@@ -163,6 +163,8 @@ public class EventLogging {
         }
         
         if (deletedMessage != null) {
+            String dateStr = deletedMessage.getCreatedTime().format(DateTimeFormatter.ofPattern("MMM dd yyyy HH:mm:ss")) + " UTC";
+            eb.addField("Created Time", dateStr, true);
             GuildChannel channel = HifumiBot.getSelf().getJDA().getGuildChannelById(deletedMessage.getChannelId());
             eb.addField("Channel", channel.getAsMention(), true);
             eb.addField("Message Content (Truncated to 512 chars)", StringUtils.truncate(deletedMessage.getBodyContent(), 512), false);

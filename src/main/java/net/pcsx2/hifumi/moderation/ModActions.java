@@ -21,7 +21,7 @@ public class ModActions {
 
     private static final String BOT_FOOTER = "Don't know why you are receiving this message? Please check that your Discord account is secure, someone might be using your account as a spam bot.";
 
-    public static synchronized void deleteMessagesMatchingSince(Message message, long timestamp) {
+    public static void deleteMessagesMatchingSince(Message message, long timestamp) {
         ArrayList<MessageObject> duplicates = Database.getIdenticalMessagesSinceTime(message.getAuthor().getIdLong(), message.getContentRaw(), timestamp);
 
         for (MessageObject duplicate : duplicates) {
@@ -46,7 +46,7 @@ public class ModActions {
         }
     }
 
-    public static synchronized boolean timeoutAndNotifyUser(Guild server, long userIdLong) {
+    public static boolean timeoutAndNotifyUser(Guild server, long userIdLong) {
         try {
             Member member = server.retrieveMemberById(userIdLong).complete();
 
@@ -72,7 +72,7 @@ public class ModActions {
         return false;
     }
 
-    public static synchronized boolean kickAndNotifyUser(Guild server, long userIdLong) {
+    public static boolean kickAndNotifyUser(Guild server, long userIdLong) {
         Log.info("Kick and notify action start");
 
         try {

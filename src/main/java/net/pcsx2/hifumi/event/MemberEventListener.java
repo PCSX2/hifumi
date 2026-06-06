@@ -11,6 +11,7 @@ import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.events.guild.GuildBanEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
+import net.dv8tion.jda.api.events.guild.member.update.GuildMemberUpdateFlagsEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.pcsx2.hifumi.EventLogging;
 import net.pcsx2.hifumi.HifumiBot;
@@ -26,6 +27,11 @@ public class MemberEventListener extends ListenerAdapter {
         HifumiBot.getSelf().getScheduler().runOnce(() -> {
             // Store user and join records, then check for the join-leave-join pattern
             Database.insertMemberJoinEvent(event);
+            
+            // Eval for spam flag
+            HifumiBot.getSelf().getSuspectedSpammerHandler().evaluateMember(event.getMember());
+            
+            // Check fast join-leave-join
             ArrayList<MemberEventObject> events = Database.getRecentMemberEvents(event.getMember().getIdLong());
 
             if (events.size() >= 3) {
@@ -81,6 +87,13 @@ public class MemberEventListener extends ListenerAdapter {
             // Store user and leave records
             Database.insertMemberBanEvent(event, time);
             EventLogging.logGuildBanEvent(event);
+        });
+    }
+    
+    @Override 
+    public void onGuildMemberUpdateFlags(GuildMemberUpdateFlagsEvent event) {
+        HifumiBot.getSelf().getScheduler().runOnce(() -> {
+            HifumiBot.getSelf().getSuspectedSpammerHandler().evaluateMember(event.getMember());
         });
     }
 }

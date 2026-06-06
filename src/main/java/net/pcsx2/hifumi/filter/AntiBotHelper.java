@@ -13,7 +13,8 @@ import net.dv8tion.jda.api.components.buttons.ButtonStyle;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.Message.Attachment;
 import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.pcsx2.hifumi.HifumiBot;
@@ -90,8 +91,12 @@ public class AntiBotHelper implements IFilterHelper {
         ArrayList<MessageObject> otherMessages = Database.getAllMessagesSinceTime(this.message.getAuthor().getIdLong(), timeToRemoveMessagesSince.toEpochSecond());
 
         for (MessageObject otherMessage : otherMessages) {
-            TextChannel channel = HifumiBot.getSelf().getJDA().getTextChannelById(otherMessage.getChannelId());
-            channel.deleteMessageById(otherMessage.getMessageId()).queue();
+            GuildChannel channel = HifumiBot.getSelf().getJDA().getGuildChannelById(otherMessage.getChannelId());
+            
+            if (channel != null && channel instanceof MessageChannel) {
+                MessageChannel mChannel = (MessageChannel) channel;
+                mChannel.deleteMessageById(otherMessage.getMessageId()).queue();
+            }
         }
 
         EmbedBuilder eb = new EmbedBuilder();

@@ -4,23 +4,24 @@ import java.awt.Color;
 import java.time.Duration;
 import java.util.ArrayList;
 
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
+import net.dv8tion.jda.api.exceptions.InsufficientPermissionException;
 import net.pcsx2.hifumi.HifumiBot;
 import net.pcsx2.hifumi.database.Database;
 import net.pcsx2.hifumi.database.objects.MessageObject;
 import net.pcsx2.hifumi.util.Log;
 import net.pcsx2.hifumi.util.Messaging;
 
-import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.exceptions.InsufficientPermissionException;
-
 public class ModActions {
 
     private static final String BOT_FOOTER = "Don't know why you are receiving this message? Please check that your Discord account is secure, someone might be using your account as a spam bot.";
 
-    public static synchronized void deleteMessagesMatchingSince(Message message, long timestamp) {
+    public static void deleteMessagesMatchingSince(Message message, long timestamp) {
         ArrayList<MessageObject> duplicates = Database.getIdenticalMessagesSinceTime(message.getAuthor().getIdLong(), message.getContentRaw(), timestamp);
 
         for (MessageObject duplicate : duplicates) {
@@ -31,8 +32,21 @@ public class ModActions {
             }
         }
     }
+    
+    public static void deleteAllMessageFromUserSince(long userIdLong, long timestamp) {
+        ArrayList<MessageObject> messageList = Database.getAllMessagesSinceTime(userIdLong, timestamp);
 
-    public static synchronized boolean timeoutAndNotifyUser(Guild server, long userIdLong) {
+        for (MessageObject message : messageList) {
+            GuildChannel channel = HifumiBot.getSelf().getJDA().getGuildChannelById(message.getChannelId());
+            
+            if (channel != null && channel instanceof MessageChannel) {
+                MessageChannel mChannel = (MessageChannel) channel;
+                mChannel.deleteMessageById(message.getMessageId()).queue();
+            }
+        }
+    }
+
+    public static boolean timeoutAndNotifyUser(Guild server, long userIdLong) {
         try {
             Member member = server.retrieveMemberById(userIdLong).complete();
 
@@ -58,7 +72,7 @@ public class ModActions {
         return false;
     }
 
-    public static synchronized boolean kickAndNotifyUser(Guild server, long userIdLong) {
+    public static boolean kickAndNotifyUser(Guild server, long userIdLong) {
         Log.info("Kick and notify action start");
 
         try {

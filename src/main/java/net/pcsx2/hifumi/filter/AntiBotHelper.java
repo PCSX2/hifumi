@@ -13,8 +13,6 @@ import net.dv8tion.jda.api.components.buttons.ButtonStyle;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.Message.Attachment;
 import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
-import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.pcsx2.hifumi.HifumiBot;
@@ -47,6 +45,10 @@ public class AntiBotHelper implements IFilterHelper {
         if (isScam) {
             long authorIdLong = this.message.getAuthor().getIdLong();
             boolean timeoutRes = ModActions.timeoutAndNotifyUser(this.message.getGuild(), authorIdLong);
+            
+            // Sweep up any other messages the bot might have blasted out while this runnable was going.
+            OffsetDateTime timeToRemoveMessagesSince = OffsetDateTime.now().minusMinutes(AGE_MINUTES_TO_REMOVE_MESSAGES);
+            ModActions.deleteAllMessageFromUserSince(authorIdLong, timeToRemoveMessagesSince.toEpochSecond());
             
             if (timeoutRes) {
                 this.sendTimeoutNotice();
@@ -86,19 +88,6 @@ public class AntiBotHelper implements IFilterHelper {
         // If we delete the message first then attachments go too.
         ArrayList<FileUpload> files = AttachmentUtils.getMinifiedAttachments(message);
         
-        // Sweep up any other messages the bot might have blasted out while this runnable was going.
-        OffsetDateTime timeToRemoveMessagesSince = OffsetDateTime.now().minusMinutes(AGE_MINUTES_TO_REMOVE_MESSAGES);
-        ArrayList<MessageObject> otherMessages = Database.getAllMessagesSinceTime(this.message.getAuthor().getIdLong(), timeToRemoveMessagesSince.toEpochSecond());
-
-        for (MessageObject otherMessage : otherMessages) {
-            GuildChannel channel = HifumiBot.getSelf().getJDA().getGuildChannelById(otherMessage.getChannelId());
-            
-            if (channel != null && channel instanceof MessageChannel) {
-                MessageChannel mChannel = (MessageChannel) channel;
-                mChannel.deleteMessageById(otherMessage.getMessageId()).queue();
-            }
-        }
-
         EmbedBuilder eb = new EmbedBuilder();
         eb.setTitle("User timed out for suspected image scams");
         eb.setDescription("User has not posted anything else in the last " + DAYS_SINCE_LAST_MESSAGE + " days, but posted at least " + LINK_THRESHOLD + " links and/or attachments in one message.\n\n");

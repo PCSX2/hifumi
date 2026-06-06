@@ -20,6 +20,8 @@ import net.pcsx2.hifumi.util.AttachmentUtils;
 import net.pcsx2.hifumi.util.Messaging;
 
 public class AntiSpamHelper implements IFilterHelper {
+    
+    private static final int AGE_MINUTES_TO_REMOVE_MESSAGES = 5;
 
     private final Message message;
 
@@ -37,10 +39,9 @@ public class AntiSpamHelper implements IFilterHelper {
             // Timeout the user first
             boolean timeoutRes = ModActions.timeoutAndNotifyUser(this.message.getGuild(), usr.getIdLong());
             
-            long cooldownSeconds = HifumiBot.getSelf().getConfig().spamOptions.cooldownSeconds;
-            OffsetDateTime cooldownSubtracted = this.message.getTimeCreated().minusSeconds(cooldownSeconds);
-            long cooldownEpochSeconds = cooldownSubtracted.toEpochSecond();
-            ModActions.deleteMessagesMatchingSince(this.message, cooldownEpochSeconds);
+            // Sweep up any other messages the bot might have blasted out while this runnable was going.
+            OffsetDateTime cooldownSubtracted = this.message.getTimeCreated().minusMinutes(AGE_MINUTES_TO_REMOVE_MESSAGES);
+            ModActions.deleteAllMessageFromUserSince(usr.getIdLong(), cooldownSubtracted.toEpochSecond());
 
             if (timeoutRes) {
                 ArrayList<FileUpload> files = AttachmentUtils.getMinifiedAttachments(message);

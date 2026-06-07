@@ -51,7 +51,6 @@ import net.pcsx2.hifumi.event.RoleEventListener;
 import net.pcsx2.hifumi.event.SelectMenuEventListener;
 import net.pcsx2.hifumi.event.SlashCommandListener;
 import net.pcsx2.hifumi.event.UserEventListener;
-import net.pcsx2.hifumi.moderation.SuspectedSpammerHandler;
 import net.pcsx2.hifumi.permissions.PermissionManager;
 import net.pcsx2.hifumi.util.Log;
 import net.pcsx2.hifumi.util.Messaging;
@@ -110,7 +109,6 @@ public class HifumiBot {
     private GpuIndex gpuIndex;
     private CommandIndex commandIndex;
     private PermissionManager permissionManager;
-    private SuspectedSpammerHandler susSpammerHandler;
     
     private GameIndex gameIndex;
     private Translator deepL;
@@ -173,7 +171,6 @@ public class HifumiBot {
             gpuIndex = new GpuIndex();
             commandIndex = new CommandIndex();
             permissionManager = new PermissionManager(superuserId);
-            susSpammerHandler = new SuspectedSpammerHandler();
             jda.addEventListener(new RoleEventListener());
             jda.addEventListener(new MessageEventListener());
             jda.addEventListener(new MemberEventListener());
@@ -280,10 +277,6 @@ public class HifumiBot {
 
     public PermissionManager getPermissionManager() {
         return permissionManager;
-    }
-    
-    public SuspectedSpammerHandler getSuspectedSpammerHandler() {
-        return susSpammerHandler;
     }
     
     public GameIndex getGameIndex() {

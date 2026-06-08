@@ -55,6 +55,7 @@ import net.pcsx2.hifumi.command.slash.CommandPrompt;
 import net.pcsx2.hifumi.command.slash.CommandReload;
 import net.pcsx2.hifumi.command.slash.CommandRun;
 import net.pcsx2.hifumi.command.slash.CommandSay;
+import net.pcsx2.hifumi.command.slash.CommandScamHash;
 import net.pcsx2.hifumi.command.slash.CommandSerial;
 import net.pcsx2.hifumi.command.slash.CommandServerMetadata;
 import net.pcsx2.hifumi.command.slash.CommandShutdown;
@@ -123,6 +124,7 @@ public class CommandIndex {
         registerSlashCommand(new CommandServerMetadata());
         registerSlashCommand(new CommandUnwarez());
         registerSlashCommand(new CommandConfig());
+        registerSlashCommand(new CommandScamHash());
     }
     
     public void rebuildMessage() {

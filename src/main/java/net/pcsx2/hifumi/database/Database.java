@@ -722,6 +722,53 @@ public class Database {
         
         return ret;
     }
+    
+    public static ArrayList<MessageObject> getAllMessagesSinceTimeExcept(long userIdLong, long timestamp, long exceptedMessageId) {
+        ArrayList<MessageObject> ret = new ArrayList<MessageObject>();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
+
+        // First get the latest revision of the message
+        try (PreparedStatement getMessageEvents = rConn.prepareStatement("""
+                SELECT
+                    e.id, e.fk_user, e.fk_message, e.content, e.timestamp,
+                    m.message_id, m.fk_channel, m.jump_link, m.fk_reply_to_message
+                FROM message_event AS e
+                INNER JOIN message AS m ON e.fk_message = m.message_id
+                WHERE e.fk_user = ?
+                AND e.action = 'send'
+                AND e.timestamp >= ?
+                AND NOT m.message_id = ?
+                ORDER BY e.timestamp DESC;
+                """)) {
+            getMessageEvents.setLong(1, userIdLong);
+            getMessageEvents.setLong(2, timestamp);
+            getMessageEvents.setLong(3, exceptedMessageId);
+            
+            try (ResultSet res = getMessageEvents.executeQuery()) {
+                while (res.next()) {
+                    MessageObject messageObj = new MessageObject(
+                        res.getLong("fk_message"),
+                        res.getLong("fk_user"),
+                        DateTimeUtils.longToOffsetDateTime(res.getLong("timestamp")),
+                        null,
+                        res.getLong("fk_channel"),
+                        res.getString("content"),
+                        res.getString("jump_link"),
+                        null,
+                        null
+                    );
+
+                    ret.add(messageObj);
+                }
+            }
+
+            return ret;
+        } catch (SQLException e) {
+            Messaging.logException("Database", "getAllMessagesSinceTimeExcept", e);
+        }
+        
+        return ret;
+    }
 
     public static boolean insertWarezEvent(WarezEventObject warezEvent, User user) {
         Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();

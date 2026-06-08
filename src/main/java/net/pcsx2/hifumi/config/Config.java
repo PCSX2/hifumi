@@ -49,6 +49,7 @@ public class Config implements IConfig {
     public EntryBarrierOptions entryBarrierOptions;
     public SerializedEmbed warezPrompt;
     public SerializedEmbed unwarezPrompt;
+    public HoneypotOptions honeypotOptions;
 
     public Config() {
         channels = new Channels();
@@ -63,6 +64,7 @@ public class Config implements IConfig {
         entryBarrierOptions = new EntryBarrierOptions();
         warezPrompt = new SerializedEmbed();
         unwarezPrompt = new SerializedEmbed();
+        honeypotOptions = new HoneypotOptions();
     }
 
     public class Logging {
@@ -214,6 +216,16 @@ public class Config implements IConfig {
             name = new String("");
             value = new String("");
             inline = false;
+        }
+    }
+    
+    public class HoneypotOptions {
+        public String roleId;
+        public String channelId;
+        
+        public HoneypotOptions() {
+            roleId = new String("");
+            channelId = new String("");
         }
     }
 }

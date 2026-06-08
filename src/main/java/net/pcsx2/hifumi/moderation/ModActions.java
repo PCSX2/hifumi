@@ -45,6 +45,19 @@ public class ModActions {
             }
         }
     }
+    
+    public static void deleteAllMessageFromUserSinceExcept(long userIdLong, long timestamp, long exceptedMessageId) {
+        ArrayList<MessageObject> messageList = Database.getAllMessagesSinceTimeExcept(userIdLong, timestamp, exceptedMessageId);
+
+        for (MessageObject message : messageList) {
+            GuildChannel channel = HifumiBot.getSelf().getJDA().getGuildChannelById(message.getChannelId());
+            
+            if (channel != null && channel instanceof MessageChannel) {
+                MessageChannel mChannel = (MessageChannel) channel;
+                mChannel.deleteMessageById(message.getMessageId()).queue();
+            }
+        }
+    }
 
     public static boolean timeoutAndNotifyUser(Guild server, long userIdLong) {
         try {

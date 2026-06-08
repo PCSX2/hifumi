@@ -29,6 +29,7 @@ public class MessageFilteringRunnable implements Runnable {
         }
         
         List<IFilterHelper> helpers = List.of(
+            new HoneypotFilter(this.message),
             new AntiSpamHelper(this.message),
             new AntiForwardHelper(this.message),
             new AntiBotHelper(this.message)

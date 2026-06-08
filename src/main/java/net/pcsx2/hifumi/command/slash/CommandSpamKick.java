@@ -48,6 +48,8 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands;
 
 public class CommandSpamKick extends AbstractSlashCommand {
 
+    private static final int AGE_MINUTES_TO_REMOVE_MESSAGES = 5;
+    
     @Override
     public void onExecute(SlashCommandInteractionEvent event) {
         OptionMapping opt = event.getOption("user");
@@ -106,6 +108,9 @@ public class CommandSpamKick extends AbstractSlashCommand {
 
             Messaging.logInfoEmbed(eb.build());
             event.getHook().editOriginal("Successfully messaged and kicked " + member.getUser().getAsMention()).queue();
+            OffsetDateTime currentTime = OffsetDateTime.now();
+            OffsetDateTime cutoffTime = currentTime.minusMinutes(AGE_MINUTES_TO_REMOVE_MESSAGES);
+            ModActions.deleteAllMessageFromUserSince(usr.getIdLong(), cutoffTime.toEpochSecond());
         } catch (Exception e) {
             Messaging.logException("CommandSpamKick", "onExecute", e);
             event.getHook().editOriginal("An internal error occurred, check the bot logging channel").queue();

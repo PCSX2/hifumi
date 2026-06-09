@@ -19,6 +19,7 @@ import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.pcsx2.hifumi.HifumiBot;
 import net.pcsx2.hifumi.moderation.ModActions;
 import net.pcsx2.hifumi.util.AttachmentUtils;
+import net.pcsx2.hifumi.util.Messaging;
 import net.pcsx2.hifumi.util.RoleUtils;
 
 public class HoneypotHelper implements IFilterHelper {
@@ -104,5 +105,6 @@ public class HoneypotHelper implements IFilterHelper {
         MessageCreateBuilder mb = new MessageCreateBuilder();
         mb.addEmbeds(eb.build());
         mb.addFiles(files);
+        Messaging.logInfoMessage(mb.build());
     }
 }

@@ -26,6 +26,7 @@ public class ScamHashHelper implements IFilterHelper {
     private final Message message;
     
     private String sha256;
+    private String hashDescription;
     
     public ScamHashHelper(Message message) {
         this.message = message;
@@ -50,9 +51,10 @@ public class ScamHashHelper implements IFilterHelper {
             
             if (sha256Opt.isPresent()) {
                 this.sha256 = sha256Opt.get();
-                Optional<ScamHashObject> scamHashOpt = Database.getScamHash(this.sha256);
+                Optional<ScamHashObject> scamHashOpt = Database.getActiveScamHash(this.sha256);
                 
                 if (scamHashOpt.isPresent()) {
+                    this.hashDescription = scamHashOpt.get().getDescription();
                     return true;
                 }
             }
@@ -82,6 +84,8 @@ public class ScamHashHelper implements IFilterHelper {
         eb.addField("User ID", user.getId(), true);
         eb.addField("Username", user.getName(), true);
         eb.addField("Display Name (as mention)", user.getAsMention(), true);
+        eb.addField("Matched SHA3-256 Hash", this.sha256, false);
+        eb.addField("Hash Description", this.hashDescription, false);
         eb.setColor(Color.YELLOW);
         
         // Body content preview

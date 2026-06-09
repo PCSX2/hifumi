@@ -5,11 +5,13 @@ public class ScamHashObject {
     private String sha256;
     private long timestamp;
     private String description;
+    private boolean active;
     
-    public ScamHashObject(String sha256, long timestamp, String description) {
+    public ScamHashObject(String sha256, long timestamp, String description, boolean active) {
         this.sha256 = sha256;
         this.timestamp = timestamp;
         this.description = description;
+        this.active = active;
     }
 
     public String getSHA256() {
@@ -22,5 +24,9 @@ public class ScamHashObject {
     
     public String getDescription() {
         return this.description;
+    }
+    
+    public boolean isActive() {
+        return this.active;
     }
 }

@@ -5,9 +5,12 @@ import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Optional;
 
 import javax.imageio.ImageIO;
 
@@ -50,5 +53,33 @@ public class AttachmentUtils {
         }
         
         return files;
+    }
+    
+    public static Optional<String> generateImageSHA256(Attachment attachment) {
+        try {
+            URL url = URL.of(URI.create(attachment.getProxyUrl()), null);
+            
+            try (InputStream is = url.openStream()) {
+                MessageDigest digest = MessageDigest.getInstance("SHA3-256");
+                byte[] hashBytes = digest.digest(is.readAllBytes());
+                StringBuilder hexString = new StringBuilder(2 * hashBytes.length);
+                
+                for (int i = 0; i < hashBytes.length; i++) {
+                    String hex = Integer.toHexString(0xff & hashBytes[i]);
+                    
+                    if (hex.length() == 1) {
+                        hexString.append('0');
+                    }
+                    
+                    hexString.append(hex);
+                }
+                
+                return Optional.of(hexString.toString());
+            }
+        } catch (Exception e) {
+            // Squelch
+        }
+        
+        return Optional.empty();
     }
 }

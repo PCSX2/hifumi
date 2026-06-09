@@ -36,6 +36,7 @@ import net.pcsx2.hifumi.database.objects.CounterObject;
 import net.pcsx2.hifumi.database.objects.InteractionEventObject;
 import net.pcsx2.hifumi.database.objects.MemberEventObject;
 import net.pcsx2.hifumi.database.objects.MessageObject;
+import net.pcsx2.hifumi.database.objects.ScamHashObject;
 import net.pcsx2.hifumi.database.objects.WarezEventObject;
 import net.pcsx2.hifumi.util.DateTimeUtils;
 import net.pcsx2.hifumi.util.Messaging;
@@ -1697,5 +1698,128 @@ public class Database {
         }
         
         return ret;
+    }
+    
+    public static void insertScamHash(String sha256, String description) {
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+        
+        try (PreparedStatement insertScamHash = wConn.prepareStatement("""
+                INSERT INTO scam_hash (sha256, timestamp, description, active)
+                VALUES (?, ?, ?, true)
+                ON CONFLICT (sha256) DO NOTHING;
+                """)) {
+            insertScamHash.setString(1, sha256);
+            insertScamHash.setLong(2, OffsetDateTime.now().toEpochSecond());
+            insertScamHash.setString(3, description);
+            insertScamHash.executeUpdate();
+        } catch (SQLException e) {
+            Messaging.logException("Database", "insertScamHash", e);
+        }
+    }
+    
+    public static void updateScamHash(String sha256, boolean state) {
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+        
+        try (PreparedStatement updateScamHash = wConn.prepareStatement("""
+                UPDATE scam_hash
+                SET active = ?
+                WHERE sha256 = ?;
+                """)) {
+            updateScamHash.setBoolean(1, state);
+            updateScamHash.setString(2, sha256);
+            updateScamHash.executeUpdate();
+        } catch (SQLException e) {
+            Messaging.logException("Database", "updateScamHash", e);
+        }
+    }
+    
+    public static void updateScamHash(String sha256, boolean state, String description) {
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+        
+        try (PreparedStatement updateScamHash = wConn.prepareStatement("""
+                UPDATE scam_hash
+                SET active = ?, description = ?
+                WHERE sha256 = ?;
+                """)) {
+            updateScamHash.setBoolean(1, state);
+            updateScamHash.setString(2, description);
+            updateScamHash.setString(3, sha256);
+            updateScamHash.executeUpdate();
+        } catch (SQLException e) {
+            Messaging.logException("Database", "updateScamHash", e);
+        }
+    }
+    
+    public static Optional<ScamHashObject> getActiveScamHash(String sha256) {
+        Optional<ScamHashObject> ret = Optional.empty();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
+        
+        try (PreparedStatement getScamHash = rConn.prepareStatement("""
+                SELECT sha256, timestamp, description, active
+                FROM scam_hash
+                WHERE sha256 = ?
+                AND active = true
+                """)) {
+            getScamHash.setString(1, sha256);
+            
+            try (ResultSet res = getScamHash.executeQuery()) {
+                if (res.next()) {
+                    ret = Optional.of(new ScamHashObject(
+                            res.getString("sha256"), 
+                            res.getLong("timestamp"), 
+                            res.getString("description"),
+                            res.getBoolean("active")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            Messaging.logException("Database", "getActiveScamHash", e);
+        }
+        
+        return ret;
+    }
+    
+    public static Optional<ScamHashObject> getScamHash(String sha256) {
+        Optional<ScamHashObject> ret = Optional.empty();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
+        
+        try (PreparedStatement getScamHash = rConn.prepareStatement("""
+                SELECT sha256, timestamp, description, active
+                FROM scam_hash
+                WHERE sha256 = ?
+                """)) {
+            getScamHash.setString(1, sha256);
+            
+            try (ResultSet res = getScamHash.executeQuery()) {
+                if (res.next()) {
+                    ret = Optional.of(new ScamHashObject(
+                            res.getString("sha256"), 
+                            res.getLong("timestamp"), 
+                            res.getString("description"),
+                            res.getBoolean("active")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            Messaging.logException("Database", "getScamHash", e);
+        }
+        
+        return ret;
+    }
+    
+    public static void insertScamHashMatch(long timestamp, String sha256, long messageId) {
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+        
+        try (PreparedStatement insertScamHashMatch = wConn.prepareStatement("""
+                INSERT INTO scam_hash_match (timestamp, fk_scam_hash, fk_message)
+                VALUES (?, ?, ?);
+                """)) {
+            insertScamHashMatch.setLong(1, OffsetDateTime.now().toEpochSecond());
+            insertScamHashMatch.setString(2, sha256);
+            insertScamHashMatch.setLong(3, messageId);
+            insertScamHashMatch.executeUpdate();
+        } catch (SQLException e) {
+            Messaging.logException("Database", "insertScamHashMatch", e);
+        }
     }
 }

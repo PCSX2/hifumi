@@ -51,7 +51,9 @@ public class SQLite {
         "013-create-command-table.sql",
         "014-create-command-event-table.sql",
         "015-create-command-event-option-table.sql",
-        "016-create-automod-event-table.sql"
+        "016-create-automod-event-table.sql",
+        "017-create-scam-hash-table.sql",
+        "018-create-scam-hash-match-table.sql"
     };
 
     private void ensureDatabaseIsInitialized(Connection conn) {

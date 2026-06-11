@@ -53,7 +53,8 @@ public class SQLite {
         "015-create-command-event-option-table.sql",
         "016-create-automod-event-table.sql",
         "017-create-scam-hash-table.sql",
-        "018-create-scam-hash-match-table.sql"
+        "018-create-scam-hash-match-table.sql",
+        "019-create-honeypot-event-table.sql"
     };
 
     private void ensureDatabaseIsInitialized(Connection conn) {

@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.CategoryLabelPositions;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.category.BarRenderer;
@@ -114,6 +115,7 @@ public class ChartGenerator {
         JFreeChart chart = ChartFactory.createLineChart("Spamkick Events (grouped by " + timeUnit + ", cumulative over displayed time frame)", timeUnit, "Spamkick Events", dataset, PlotOrientation.VERTICAL, true, true, false);
         
         CategoryPlot plot = (CategoryPlot) chart.getPlot();
+        plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.UP_45);
         LineAndShapeRenderer renderer = (LineAndShapeRenderer) plot.getRenderer();
         renderer.setDefaultShapesVisible(true);
         

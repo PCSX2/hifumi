@@ -21,6 +21,7 @@ import net.pcsx2.hifumi.command.AbstractSlashCommand;
 import net.pcsx2.hifumi.command.slash.CommandEmulog;
 import net.pcsx2.hifumi.command.slash.CommandServerMetadata;
 import net.pcsx2.hifumi.command.slash.CommandWhois;
+import net.pcsx2.hifumi.database.Database;
 import net.pcsx2.hifumi.moderation.ModActions;
 import net.pcsx2.hifumi.util.MemberUtils;
 import net.pcsx2.hifumi.util.Messaging;
@@ -134,6 +135,7 @@ public class ButtonEventListener extends ListenerAdapter {
                                     ActionRow actionRow = ActionRow.of(button);
                                     event.getHook().editMessageComponentsById(event.getMessageId(), actionRow).complete();
                                     event.getMessage().editMessageAttachments(List.of()).complete();
+                                    Database.insertAntiBotEvent(event.getTimeCreated().toEpochSecond(), userIdLong);
                                 }
                                 case "clear" -> {
                                     Optional<Member> memberOpt = MemberUtils.getOrRetrieveMember(event.getGuild(), userIdLong);

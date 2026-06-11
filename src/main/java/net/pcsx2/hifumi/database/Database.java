@@ -1840,6 +1840,21 @@ public class Database {
         }
     }
     
+    public static void insertAntiBotEvent(long timestamp, long userId) {
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+        
+        try (PreparedStatement insertAntiBotEvent = wConn.prepareStatement("""
+                INSERT INTO antibot_event (timestamp, fk_user)
+                VALUES (?, ?);
+                """)) {
+            insertAntiBotEvent.setLong(1, timestamp);
+            insertAntiBotEvent.setLong(2, userId);
+            insertAntiBotEvent.executeUpdate();
+        } catch (SQLException e) {
+            Messaging.logException("Database", "insertAntiBotEvent", e);
+        }
+    }
+    
     public static ArrayList<SpamkickChartData> getSpamkickCommandEventsAggregated(long startTimestamp, long endTimestamp, String timeUnit) {
         ArrayList<SpamkickChartData> ret = new ArrayList<SpamkickChartData>();
         Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
@@ -1952,6 +1967,46 @@ public class Database {
                     data.timeUnit = latestEvent.getString("date_unit");
                     data.events = latestEvent.getInt("total");
                     data.trigger = "hash_match";
+                    ret.add(data);
+                }
+            }
+        } catch (SQLException e) {
+            Messaging.logException("Database", "getHashMatchesAggregated", e);
+        }
+        
+        return ret;
+    }
+    
+    public static ArrayList<SpamkickChartData> getAntiBotEventsAggregated(long startTimestamp, long endTimestamp, String timeUnit) {
+        ArrayList<SpamkickChartData> ret = new ArrayList<SpamkickChartData>();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
+        String formatStr = TimeUtils.getSQLFormatStringFromTimeUnit(timeUnit);
+        
+        try (PreparedStatement getAntiBotEvents = rConn.prepareStatement("""
+                WITH grouped AS (
+                    SELECT timestamp, COUNT(*) AS cmd_count
+                    FROM antibot_event
+                    WHERE timestamp >= ?
+                    AND timestamp <= ?
+                    GROUP BY STRFTIME(?, DATETIME(timestamp, 'unixepoch'))
+                )
+                SELECT 
+                    STRFTIME(?, DATETIME(timestamp, 'unixepoch')) AS date_unit,
+                    SUM(cmd_count) OVER (ORDER BY timestamp) AS total
+                FROM grouped
+                ORDER BY timestamp;
+                """)) {
+            getAntiBotEvents.setLong(1, startTimestamp);
+            getAntiBotEvents.setLong(2, endTimestamp);
+            getAntiBotEvents.setString(3, formatStr);
+            getAntiBotEvents.setString(4, formatStr);
+            
+            try (ResultSet latestEvent = getAntiBotEvents.executeQuery()) {
+                while (latestEvent.next()) {
+                    SpamkickChartData data = new SpamkickChartData();
+                    data.timeUnit = latestEvent.getString("date_unit");
+                    data.events = latestEvent.getInt("total");
+                    data.trigger = "antibot";
                     ret.add(data);
                 }
             }

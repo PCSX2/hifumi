@@ -104,6 +104,7 @@ public class ChartGenerator {
         spamkickDataList.addAll(Database.getSpamkickCommandEventsAggregated(startTimestamp, endTimestamp, timeUnit));
         spamkickDataList.addAll(Database.getHoneypotEventsAggregated(startTimestamp, endTimestamp, timeUnit));
         spamkickDataList.addAll(Database.getHashMatchesAggregated(startTimestamp, endTimestamp, timeUnit));
+        spamkickDataList.addAll(Database.getAntiBotEventsAggregated(startTimestamp, endTimestamp, timeUnit));
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
         
         for (SpamkickChartData data : spamkickDataList) {

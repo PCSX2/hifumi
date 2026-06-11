@@ -1855,66 +1855,54 @@ public class Database {
         }
     }
     
-    public static ArrayList<SpamkickChartData> getSpamkickCommandEventsAggregated(long startTimestamp, long endTimestamp, String timeUnit) {
+    public static ArrayList<SpamkickChartData> getSpamkickCommandEventsBetween(long startTimestamp, long endTimestamp, String timeUnit) {
         ArrayList<SpamkickChartData> ret = new ArrayList<SpamkickChartData>();
         Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
         String formatStr = TimeUtils.getSQLFormatStringFromTimeUnit(timeUnit);
         
         try (PreparedStatement getSpamkickCommandEvents = rConn.prepareStatement("""
-                WITH grouped AS (
-                    SELECT timestamp, COUNT(*) AS cmd_count
-                    FROM command_event AS e
-                	INNER JOIN command AS cmd ON cmd.discord_id = e.command_fk
-                	WHERE cmd.name = "spamkick"
-                	AND timestamp >= ?
-                    AND timestamp <= ?
-                	GROUP BY STRFTIME(?, DATETIME(timestamp, 'unixepoch'))
-                )
-                SELECT 
-                	STRFTIME(?, DATETIME(timestamp, 'unixepoch')) AS date_unit,
-                    SUM(cmd_count) OVER (ORDER BY timestamp) AS total
-                FROM grouped
-                ORDER BY timestamp;
+                SELECT COUNT(e.discord_id) AS events, STRFTIME(?, DATETIME(e.timestamp, 'unixepoch')) AS timeUnit
+                FROM command_event AS e
+            	INNER JOIN command AS cmd ON cmd.discord_id = e.command_fk
+            	WHERE cmd.name = "spamkick"
+            	AND e.timestamp >= ?
+                AND e.timestamp <= ?
+                GROUP BY STRFTIME(?, DATETIME(e.timestamp, 'unixepoch'))
+                ORDER BY e.timestamp ASC;
                 """)) {
-            getSpamkickCommandEvents.setLong(1, startTimestamp);
-            getSpamkickCommandEvents.setLong(2, endTimestamp);
-            getSpamkickCommandEvents.setString(3, formatStr);
+            getSpamkickCommandEvents.setString(1, formatStr);
+            getSpamkickCommandEvents.setLong(2, startTimestamp);
+            getSpamkickCommandEvents.setLong(3, endTimestamp);
             getSpamkickCommandEvents.setString(4, formatStr);
             
             try (ResultSet latestEvent = getSpamkickCommandEvents.executeQuery()) {
                 while (latestEvent.next()) {
                     SpamkickChartData data = new SpamkickChartData();
-                    data.timeUnit = latestEvent.getString("date_unit");
-                    data.events = latestEvent.getInt("total");
+                    data.timeUnit = latestEvent.getString("timeUnit");
+                    data.events = latestEvent.getInt("events");
                     data.trigger = "command";
                     ret.add(data);
                 }
             }
         } catch (SQLException e) {
-            Messaging.logException("Database", "getSpamkickCommandEventsAggregated", e);
+            Messaging.logException("Database", "getSpamkickCommandEventsBetween", e);
         }
         
         return ret;
     }
     
-    public static ArrayList<SpamkickChartData> getHoneypotEventsAggregated(long startTimestamp, long endTimestamp, String timeUnit) {
+    public static ArrayList<SpamkickChartData> getHoneypotEventsBetween(long startTimestamp, long endTimestamp, String timeUnit) {
         ArrayList<SpamkickChartData> ret = new ArrayList<SpamkickChartData>();
         Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
         String formatStr = TimeUtils.getSQLFormatStringFromTimeUnit(timeUnit);
         
         try (PreparedStatement getHoneypotEvents = rConn.prepareStatement("""
-                WITH grouped AS (
-                    SELECT timestamp, COUNT(*) AS cmd_count
-                    FROM honeypot_event
-                    WHERE timestamp >= ?
-                    AND timestamp <= ?
-                	GROUP BY STRFTIME(?, DATETIME(timestamp, 'unixepoch'))
-                )
-                SELECT 
-                	STRFTIME(?, DATETIME(timestamp, 'unixepoch')) AS date_unit,
-                    SUM(cmd_count) OVER (ORDER BY timestamp) AS total
-                FROM grouped
-                ORDER BY timestamp;
+                SELECT COUNT(id) AS events, STRFTIME(?, DATETIME(timestamp, 'unixepoch')) AS timeUnit
+                FROM honeypot_event
+            	WHERE timestamp >= ?
+                AND timestamp <= ?
+                GROUP BY STRFTIME(?, DATETIME(timestamp, 'unixepoch'))
+                ORDER BY timestamp ASC;
                 """)) {
             getHoneypotEvents.setLong(1, startTimestamp);
             getHoneypotEvents.setLong(2, endTimestamp);
@@ -1924,37 +1912,31 @@ public class Database {
             try (ResultSet latestEvent = getHoneypotEvents.executeQuery()) {
                 while (latestEvent.next()) {
                     SpamkickChartData data = new SpamkickChartData();
-                    data.timeUnit = latestEvent.getString("date_unit");
-                    data.events = latestEvent.getInt("total");
+                    data.timeUnit = latestEvent.getString("timeUnit");
+                    data.events = latestEvent.getInt("events");
                     data.trigger = "honeypot";
                     ret.add(data);
                 }
             }
         } catch (SQLException e) {
-            Messaging.logException("Database", "getHoneypotEventsAggregated", e);
+            Messaging.logException("Database", "getHoneypotEventsBetween", e);
         }
         
         return ret;
     }
     
-    public static ArrayList<SpamkickChartData> getHashMatchesAggregated(long startTimestamp, long endTimestamp, String timeUnit) {
+    public static ArrayList<SpamkickChartData> getHashMatchesBetween(long startTimestamp, long endTimestamp, String timeUnit) {
         ArrayList<SpamkickChartData> ret = new ArrayList<SpamkickChartData>();
         Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
         String formatStr = TimeUtils.getSQLFormatStringFromTimeUnit(timeUnit);
         
         try (PreparedStatement getHashMatches = rConn.prepareStatement("""
-                WITH grouped AS (
-                    SELECT timestamp, COUNT(*) AS cmd_count
-                    FROM scam_hash_match
-                    WHERE timestamp >= ?
-                    AND timestamp <= ?
-                    GROUP BY STRFTIME(?, DATETIME(timestamp, 'unixepoch'))
-                )
-                SELECT 
-                    STRFTIME(?, DATETIME(timestamp, 'unixepoch')) AS date_unit,
-                    SUM(cmd_count) OVER (ORDER BY timestamp) AS total
-                FROM grouped
-                ORDER BY timestamp;
+                SELECT COUNT(id) AS events, STRFTIME(?, DATETIME(timestamp, 'unixepoch')) AS timeUnit
+                FROM scam_hash_match
+            	WHERE timestamp >= ?
+                AND timestamp <= ?
+                GROUP BY STRFTIME(?, DATETIME(timestamp, 'unixepoch'))
+                ORDER BY timestamp ASC;
                 """)) {
             getHashMatches.setLong(1, startTimestamp);
             getHashMatches.setLong(2, endTimestamp);
@@ -1964,37 +1946,31 @@ public class Database {
             try (ResultSet latestEvent = getHashMatches.executeQuery()) {
                 while (latestEvent.next()) {
                     SpamkickChartData data = new SpamkickChartData();
-                    data.timeUnit = latestEvent.getString("date_unit");
-                    data.events = latestEvent.getInt("total");
+                    data.timeUnit = latestEvent.getString("timeUnit");
+                    data.events = latestEvent.getInt("events");
                     data.trigger = "hash_match";
                     ret.add(data);
                 }
             }
         } catch (SQLException e) {
-            Messaging.logException("Database", "getHashMatchesAggregated", e);
+            Messaging.logException("Database", "getHashMatchesBetween", e);
         }
         
         return ret;
     }
     
-    public static ArrayList<SpamkickChartData> getAntiBotEventsAggregated(long startTimestamp, long endTimestamp, String timeUnit) {
+    public static ArrayList<SpamkickChartData> getAntiBotEventsBetween(long startTimestamp, long endTimestamp, String timeUnit) {
         ArrayList<SpamkickChartData> ret = new ArrayList<SpamkickChartData>();
         Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
         String formatStr = TimeUtils.getSQLFormatStringFromTimeUnit(timeUnit);
         
         try (PreparedStatement getAntiBotEvents = rConn.prepareStatement("""
-                WITH grouped AS (
-                    SELECT timestamp, COUNT(*) AS cmd_count
-                    FROM antibot_event
-                    WHERE timestamp >= ?
-                    AND timestamp <= ?
-                    GROUP BY STRFTIME(?, DATETIME(timestamp, 'unixepoch'))
-                )
-                SELECT 
-                    STRFTIME(?, DATETIME(timestamp, 'unixepoch')) AS date_unit,
-                    SUM(cmd_count) OVER (ORDER BY timestamp) AS total
-                FROM grouped
-                ORDER BY timestamp;
+                SELECT COUNT(id) AS events, STRFTIME(?, DATETIME(timestamp, 'unixepoch')) AS timeUnit
+                FROM antibot_event
+            	WHERE timestamp >= ?
+                AND timestamp <= ?
+                GROUP BY STRFTIME(?, DATETIME(timestamp, 'unixepoch'))
+                ORDER BY timestamp ASC;
                 """)) {
             getAntiBotEvents.setLong(1, startTimestamp);
             getAntiBotEvents.setLong(2, endTimestamp);
@@ -2011,7 +1987,7 @@ public class Database {
                 }
             }
         } catch (SQLException e) {
-            Messaging.logException("Database", "getHashMatchesAggregated", e);
+            Messaging.logException("Database", "getAntiBotEventsBetween", e);
         }
         
         return ret;

@@ -102,22 +102,23 @@ public class ChartGenerator {
     
     public static byte[] buildSpamkickLineChart(long startTimestamp, long endTimestamp, String timeUnit) {
         ArrayList<SpamkickChartData> spamkickDataList = new ArrayList<SpamkickChartData>();
-        spamkickDataList.addAll(Database.getSpamkickCommandEventsAggregated(startTimestamp, endTimestamp, timeUnit));
-        spamkickDataList.addAll(Database.getHoneypotEventsAggregated(startTimestamp, endTimestamp, timeUnit));
-        spamkickDataList.addAll(Database.getHashMatchesAggregated(startTimestamp, endTimestamp, timeUnit));
-        spamkickDataList.addAll(Database.getAntiBotEventsAggregated(startTimestamp, endTimestamp, timeUnit));
+        spamkickDataList.addAll(Database.getSpamkickCommandEventsBetween(startTimestamp, endTimestamp, timeUnit));
+        spamkickDataList.addAll(Database.getHoneypotEventsBetween(startTimestamp, endTimestamp, timeUnit));
+        spamkickDataList.addAll(Database.getHashMatchesBetween(startTimestamp, endTimestamp, timeUnit));
+        spamkickDataList.addAll(Database.getAntiBotEventsBetween(startTimestamp, endTimestamp, timeUnit));
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
         
         for (SpamkickChartData data : spamkickDataList) {
             dataset.addValue(data.events, data.trigger, data.timeUnit);
         }
 
-        JFreeChart chart = ChartFactory.createLineChart("Spamkick Events (grouped by " + timeUnit + ", cumulative over displayed time frame)", timeUnit, "Spamkick Events", dataset, PlotOrientation.VERTICAL, true, true, false);
+        JFreeChart chart = ChartFactory.createBarChart("Spamkick Events (grouped by " + timeUnit + ", cumulative over displayed time frame)", timeUnit, "Spamkick Events", dataset, PlotOrientation.VERTICAL, true, true, false);
         
         CategoryPlot plot = (CategoryPlot) chart.getPlot();
         plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.UP_45);
-        LineAndShapeRenderer renderer = (LineAndShapeRenderer) plot.getRenderer();
-        renderer.setDefaultShapesVisible(true);
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+        renderer.setBarPainter(new StandardBarPainter());
+        renderer.setDrawBarOutline(true);
         
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();

@@ -1904,9 +1904,9 @@ public class Database {
                 GROUP BY STRFTIME(?, DATETIME(timestamp, 'unixepoch'))
                 ORDER BY timestamp ASC;
                 """)) {
-            getHoneypotEvents.setLong(1, startTimestamp);
-            getHoneypotEvents.setLong(2, endTimestamp);
-            getHoneypotEvents.setString(3, formatStr);
+            getHoneypotEvents.setString(1, formatStr);
+            getHoneypotEvents.setLong(2, startTimestamp);
+            getHoneypotEvents.setLong(3, endTimestamp);
             getHoneypotEvents.setString(4, formatStr);
             
             try (ResultSet latestEvent = getHoneypotEvents.executeQuery()) {
@@ -1938,10 +1938,11 @@ public class Database {
                 GROUP BY STRFTIME(?, DATETIME(timestamp, 'unixepoch'))
                 ORDER BY timestamp ASC;
                 """)) {
-            getHashMatches.setLong(1, startTimestamp);
-            getHashMatches.setLong(2, endTimestamp);
-            getHashMatches.setString(3, formatStr);
+            getHashMatches.setString(1, formatStr);
+            getHashMatches.setLong(2, startTimestamp);
+            getHashMatches.setLong(3, endTimestamp);
             getHashMatches.setString(4, formatStr);
+            
             
             try (ResultSet latestEvent = getHashMatches.executeQuery()) {
                 while (latestEvent.next()) {
@@ -1972,9 +1973,9 @@ public class Database {
                 GROUP BY STRFTIME(?, DATETIME(timestamp, 'unixepoch'))
                 ORDER BY timestamp ASC;
                 """)) {
-            getAntiBotEvents.setLong(1, startTimestamp);
-            getAntiBotEvents.setLong(2, endTimestamp);
-            getAntiBotEvents.setString(3, formatStr);
+            getAntiBotEvents.setString(1, formatStr);
+            getAntiBotEvents.setLong(2, startTimestamp);
+            getAntiBotEvents.setLong(3, endTimestamp);
             getAntiBotEvents.setString(4, formatStr);
             
             try (ResultSet latestEvent = getAntiBotEvents.executeQuery()) {

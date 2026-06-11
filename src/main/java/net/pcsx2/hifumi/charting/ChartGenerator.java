@@ -11,7 +11,6 @@ import org.jfree.chart.axis.CategoryLabelPositions;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.category.BarRenderer;
-import org.jfree.chart.renderer.category.LineAndShapeRenderer;
 import org.jfree.chart.renderer.category.StandardBarPainter;
 import org.jfree.data.category.DefaultCategoryDataset;
 
@@ -28,8 +27,9 @@ public class ChartGenerator {
             dataset.addValue(data.events, data.action, data.timeUnit);
         }
 
-        JFreeChart chart = ChartFactory.createBarChart("Warez Events (by " + timeUnit + ")", timeUnit, "Warez Events", dataset, PlotOrientation.HORIZONTAL, true, true, false);
+        JFreeChart chart = ChartFactory.createBarChart("Warez Events (by " + timeUnit + ")", timeUnit, "Warez Events", dataset, PlotOrientation.VERTICAL, true, true, false);
         CategoryPlot plot = (CategoryPlot) chart.getPlot();
+        plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.UP_45);
         BarRenderer renderer = (BarRenderer) plot.getRenderer();
         renderer.setBarPainter(new StandardBarPainter());
         renderer.setDrawBarOutline(true);
@@ -55,8 +55,9 @@ public class ChartGenerator {
             dataset.addValue(data.events, data.action, data.timeUnit);
         }
 
-        JFreeChart chart = ChartFactory.createBarChart("Member Events (by " + timeUnit + ")", timeUnit, "Member Events", dataset, PlotOrientation.HORIZONTAL, true, true, false);
+        JFreeChart chart = ChartFactory.createBarChart("Member Events (by " + timeUnit + ")", timeUnit, "Member Events", dataset, PlotOrientation.VERTICAL, true, true, false);
         CategoryPlot plot = (CategoryPlot) chart.getPlot();
+        plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.UP_45);
         BarRenderer renderer = (BarRenderer) plot.getRenderer();
         renderer.setBarPainter(new StandardBarPainter());
         renderer.setDrawBarOutline(true);
@@ -83,8 +84,9 @@ public class ChartGenerator {
             dataset.addValue(data.events, data.trigger, data.timeUnit);
         }
 
-        JFreeChart chart = ChartFactory.createBarChart("Automod Events (by " + timeUnit + ")", timeUnit, "Automod Events", dataset, PlotOrientation.HORIZONTAL, true, true, false);
+        JFreeChart chart = ChartFactory.createBarChart("Automod Events (by " + timeUnit + ")", timeUnit, "Automod Events", dataset, PlotOrientation.VERTICAL, true, true, false);
         CategoryPlot plot = (CategoryPlot) chart.getPlot();
+        plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.UP_45);
         BarRenderer renderer = (BarRenderer) plot.getRenderer();
         renderer.setBarPainter(new StandardBarPainter());
         renderer.setDrawBarOutline(true);
@@ -112,7 +114,7 @@ public class ChartGenerator {
             dataset.addValue(data.events, data.trigger, data.timeUnit);
         }
 
-        JFreeChart chart = ChartFactory.createBarChart("Spamkick Events (grouped by " + timeUnit + ", cumulative over displayed time frame)", timeUnit, "Spamkick Events", dataset, PlotOrientation.VERTICAL, true, true, false);
+        JFreeChart chart = ChartFactory.createBarChart("Spamkick Events (by " + timeUnit + ")", timeUnit, "Spamkick Events", dataset, PlotOrientation.VERTICAL, true, true, false);
         
         CategoryPlot plot = (CategoryPlot) chart.getPlot();
         plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.UP_45);

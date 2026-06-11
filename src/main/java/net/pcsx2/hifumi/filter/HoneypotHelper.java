@@ -17,6 +17,7 @@ import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.pcsx2.hifumi.HifumiBot;
+import net.pcsx2.hifumi.database.Database;
 import net.pcsx2.hifumi.moderation.ModActions;
 import net.pcsx2.hifumi.util.AttachmentUtils;
 import net.pcsx2.hifumi.util.Messaging;
@@ -70,6 +71,7 @@ public class HoneypotHelper implements IFilterHelper {
             OffsetDateTime cutoffTime = currentTime.minusMinutes(AGE_MINUTES_TO_REMOVE_MESSAGES);
             ModActions.deleteAllMessageFromUserSince(member.getIdLong(), cutoffTime.toEpochSecond());
             this.notifyStaff();
+            Database.insertHoneypotEvent(currentTime.toEpochSecond(), member.getIdLong(), this.message.getIdLong());
             return true;
         }
         

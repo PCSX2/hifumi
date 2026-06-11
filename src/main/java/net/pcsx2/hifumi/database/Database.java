@@ -1822,4 +1822,20 @@ public class Database {
             Messaging.logException("Database", "insertScamHashMatch", e);
         }
     }
+    
+    public static void insertHoneypotEvent(long timestamp, long userId, long messageId) {
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+        
+        try (PreparedStatement insertHoneypotEvent = wConn.prepareStatement("""
+                INSERT INTO honeypot_event (timestamp, fk_user, fk_message)
+                VALUES (?, ?, ?);
+                """)) {
+            insertHoneypotEvent.setLong(1, timestamp);
+            insertHoneypotEvent.setLong(2, userId);
+            insertHoneypotEvent.setLong(3, messageId);
+            insertHoneypotEvent.executeUpdate();
+        } catch (SQLException e) {
+            Messaging.logException("Database", "insertHoneypotEvent", e);
+        }
+    }
 }

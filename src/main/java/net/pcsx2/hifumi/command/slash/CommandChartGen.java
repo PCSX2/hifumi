@@ -54,6 +54,7 @@ public class CommandChartGen extends AbstractSlashCommand {
             return;
         }
 
+        event.deferReply().queue();
         FileUpload file = null;
 
         switch (typeOpt.getAsString()) {
@@ -74,14 +75,14 @@ public class CommandChartGen extends AbstractSlashCommand {
                 break;
             }
             default: {
-                event.reply("Unknown chart type").setEphemeral(true).queue();
+                event.getHook().sendMessage("Unknown chart type").setEphemeral(true).queue();
                 return;
             }
         }
 
         MessageCreateBuilder mb = new MessageCreateBuilder();
         mb.addFiles(file);
-        event.reply(mb.build()).queue();
+        event.getHook().sendMessage(mb.build()).queue();
     }
 
     @Override

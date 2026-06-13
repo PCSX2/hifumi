@@ -20,6 +20,7 @@ import net.pcsx2.hifumi.HifumiBot;
 import net.pcsx2.hifumi.database.Database;
 import net.pcsx2.hifumi.moderation.ModActions;
 import net.pcsx2.hifumi.util.AttachmentUtils;
+import net.pcsx2.hifumi.util.EmbedUtil;
 import net.pcsx2.hifumi.util.Messaging;
 import net.pcsx2.hifumi.util.RoleUtils;
 
@@ -95,13 +96,7 @@ public class HoneypotHelper implements IFilterHelper {
         eb.addField("Body Content (raw, first 100 chars)", StringUtils.abbreviate(this.message.getContentRaw(), 100), false);
         
         // Attachments
-        StringBuilder sb = new StringBuilder();
-
-        for (Attachment attachment : this.message.getAttachments()) {
-            sb.append(attachment.getProxyUrl() + "\n");
-        }
-        
-        eb.addField("Attachments", sb.toString(), false);
+        eb.addField(EmbedUtil.newAttachmentListField(this.message.getAttachments()));
 
         ArrayList<FileUpload> files = AttachmentUtils.getMinifiedAttachments(message);
         MessageCreateBuilder mb = new MessageCreateBuilder();

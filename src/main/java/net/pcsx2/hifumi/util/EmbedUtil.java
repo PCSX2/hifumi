@@ -23,17 +23,19 @@
  */
 package net.pcsx2.hifumi.util;
 
-import org.apache.commons.lang3.StringUtils;
+import java.util.List;
 
-import net.pcsx2.hifumi.HifumiBot;
-import net.pcsx2.hifumi.command.dynamic.DynamicChoice;
+import org.apache.commons.lang3.StringUtils;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.Message.Attachment;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.MessageEmbed.Field;
 import net.dv8tion.jda.api.entities.User;
+import net.pcsx2.hifumi.HifumiBot;
+import net.pcsx2.hifumi.command.dynamic.DynamicChoice;
 
 public class EmbedUtil {
 
@@ -105,5 +107,47 @@ public class EmbedUtil {
         }
         
         return eb;
+    }
+    
+    /**
+     * Common method to generate an embed field for a list of links found in a message body.
+     * Truncates if total length will exceed what is allowed in a field.
+     * @param links - ArrayList<String> of links to include
+     * @return Assembled Field object
+     */
+    public static Field newLinksListField(List<String> links) {
+        StringBuilder sb = new StringBuilder();
+
+        for (String link : links) {
+            if (sb.length() + link.length() > (MessageEmbed.VALUE_MAX_LENGTH - 64)) {
+                sb.append("(extra links excluded for size)");
+                break;
+            }
+
+            sb.append(link + "\n");
+        }
+        
+        return new Field("Links in Body", sb.toString(), false);
+    }
+    
+    /**
+     * Common method to generate an embed field for a list of attachments found on a message.
+     * Truncates if total length will exceed what is allowed in a field.
+     * @param links - List<Attachment> of links to include
+     * @return Assembled Field object
+     */
+    public static Field newAttachmentListField(List<Attachment> attachments) {
+        StringBuilder sb = new StringBuilder();
+
+        for (Attachment attachment : attachments) {
+            if (sb.length() + attachment.getProxyUrl().length() > (MessageEmbed.VALUE_MAX_LENGTH - 64)) {
+                sb.append("(extra attachments excluded for size)");
+                break;
+            }
+
+            sb.append(attachment.getProxyUrl() + "\n");
+        }
+        
+        return new Field("Attachments", sb.toString(), false);
     }
 }

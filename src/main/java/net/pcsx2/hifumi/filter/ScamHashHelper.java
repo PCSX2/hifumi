@@ -17,6 +17,7 @@ import net.pcsx2.hifumi.database.Database;
 import net.pcsx2.hifumi.database.objects.ScamHashObject;
 import net.pcsx2.hifumi.moderation.ModActions;
 import net.pcsx2.hifumi.util.AttachmentUtils;
+import net.pcsx2.hifumi.util.EmbedUtil;
 import net.pcsx2.hifumi.util.Messaging;
 
 public class ScamHashHelper implements IFilterHelper {
@@ -92,13 +93,7 @@ public class ScamHashHelper implements IFilterHelper {
         eb.addField("Body Content (raw, first 100 chars)", StringUtils.abbreviate(this.message.getContentRaw(), 100), false);
         
         // Attachments
-        StringBuilder sb = new StringBuilder();
-
-        for (Attachment attachment : this.message.getAttachments()) {
-            sb.append(attachment.getProxyUrl() + "\n");
-        }
-        
-        eb.addField("Attachments", sb.toString(), false);
+        eb.addField(EmbedUtil.newAttachmentListField(this.message.getAttachments()));
 
         MessageCreateBuilder mb = new MessageCreateBuilder();
         mb.addEmbeds(eb.build());

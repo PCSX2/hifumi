@@ -11,7 +11,6 @@ import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.buttons.ButtonStyle;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.Message.Attachment;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
@@ -20,6 +19,7 @@ import net.pcsx2.hifumi.database.Database;
 import net.pcsx2.hifumi.database.objects.MessageObject;
 import net.pcsx2.hifumi.moderation.ModActions;
 import net.pcsx2.hifumi.util.AttachmentUtils;
+import net.pcsx2.hifumi.util.EmbedUtil;
 import net.pcsx2.hifumi.util.Messaging;
 import net.pcsx2.hifumi.util.Strings;
 
@@ -102,22 +102,10 @@ public class AntiBotHelper implements IFilterHelper {
         eb.addField("Body Content (raw, first 100 chars)", StringUtils.abbreviate(this.message.getContentRaw(), 100), false);
         
         // Links
-        StringBuilder sb = new StringBuilder();
-
-        for (String link : this.links) {
-            sb.append(link + "\n");
-        }
-        
-        eb.addField("Links in Body", sb.toString(), false);
+        eb.addField(EmbedUtil.newLinksListField(this.links));
         
         // Attachments
-        sb = new StringBuilder();
-
-        for (Attachment attachment : this.message.getAttachments()) {
-            sb.append(attachment.getProxyUrl() + "\n");
-        }
-        
-        eb.addField("Attachments", sb.toString(), false);
+        eb.addField(EmbedUtil.newAttachmentListField(this.message.getAttachments()));
 
         MessageCreateBuilder mb = new MessageCreateBuilder();
         mb.addEmbeds(eb.build());

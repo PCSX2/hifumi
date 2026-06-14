@@ -32,7 +32,7 @@ public class MessageFilteringRunnable implements Runnable {
             new HoneypotHelper(this.message),
             new ScamHashHelper(this.message),
             new AntiSpamHelper(this.message),
-            new AntiForwardHelper(this.message),
+            //new AntiForwardHelper(this.message),
             new AntiBotHelper(this.message)
         );
         

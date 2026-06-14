@@ -68,7 +68,7 @@ public class HoneypotHelper implements IFilterHelper {
         // If not the honeypot channel, but they have the role
         } else if (RoleUtils.memberHasRole(member, honeypotRoleId)) {
             // Smite them
-            //ModActions.kickAndNotifyUser(server, member.getIdLong());
+            ModActions.kickAndNotifyUser(server, member.getIdLong());
             OffsetDateTime currentTime = OffsetDateTime.now();
             OffsetDateTime cutoffTime = currentTime.minusMinutes(AGE_MINUTES_TO_REMOVE_MESSAGES);
             ModActions.deleteAllMessageFromUserSince(member.getIdLong(), cutoffTime.toEpochSecond());

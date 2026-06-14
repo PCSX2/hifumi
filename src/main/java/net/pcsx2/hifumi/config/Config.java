@@ -222,10 +222,12 @@ public class Config implements IConfig {
     public class HoneypotOptions {
         public String roleId;
         public String channelId;
+        public String warningMessage;
         
         public HoneypotOptions() {
             roleId = new String("");
             channelId = new String("");
+            warningMessage = new String("");
         }
     }
 }

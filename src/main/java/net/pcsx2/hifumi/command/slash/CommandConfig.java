@@ -19,6 +19,7 @@ import net.pcsx2.hifumi.HifumiBot;
 import net.pcsx2.hifumi.command.AbstractSlashCommand;
 import net.pcsx2.hifumi.config.ConfigManager;
 import net.pcsx2.hifumi.util.Messaging;
+import net.pcsx2.hifumi.util.Strings;
 
 public class CommandConfig extends AbstractSlashCommand {
     
@@ -56,7 +57,7 @@ public class CommandConfig extends AbstractSlashCommand {
                             
                             switch (sub) {
                                 case "string": {
-                                    field.set(obj, valueOpt.getAsString());
+                                    field.set(obj, Strings.unescapeNewlines(valueOpt.getAsString()));
                                     break;
                                 }
                                 case "long": {

@@ -1981,7 +1981,7 @@ public class Database {
             try (ResultSet latestEvent = getAntiBotEvents.executeQuery()) {
                 while (latestEvent.next()) {
                     SpamkickChartData data = new SpamkickChartData();
-                    data.timeUnit = latestEvent.getString("date_unit");
+                    data.timeUnit = latestEvent.getString("timeUnit");
                     data.events = latestEvent.getInt("total");
                     data.trigger = "antibot";
                     ret.add(data);

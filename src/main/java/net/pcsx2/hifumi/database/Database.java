@@ -1982,7 +1982,7 @@ public class Database {
                 while (latestEvent.next()) {
                     SpamkickChartData data = new SpamkickChartData();
                     data.timeUnit = latestEvent.getString("timeUnit");
-                    data.events = latestEvent.getInt("total");
+                    data.events = latestEvent.getInt("events");
                     data.trigger = "antibot";
                     ret.add(data);
                 }

@@ -2,7 +2,9 @@ package net.pcsx2.hifumi.filter;
 
 import java.awt.Color;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -11,7 +13,6 @@ import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.Message.Attachment;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.utils.FileUpload;
@@ -67,12 +68,13 @@ public class HoneypotHelper implements IFilterHelper {
         // If not the honeypot channel, but they have the role
         } else if (RoleUtils.memberHasRole(member, honeypotRoleId)) {
             // Smite them
-            ModActions.kickAndNotifyUser(server, member.getIdLong());
+            //ModActions.kickAndNotifyUser(server, member.getIdLong());
             OffsetDateTime currentTime = OffsetDateTime.now();
             OffsetDateTime cutoffTime = currentTime.minusMinutes(AGE_MINUTES_TO_REMOVE_MESSAGES);
             ModActions.deleteAllMessageFromUserSince(member.getIdLong(), cutoffTime.toEpochSecond());
-            this.notifyStaff();
             Database.insertHoneypotEvent(currentTime.toEpochSecond(), member.getIdLong(), this.message.getIdLong());
+            this.notifyStaff();
+            this.updateChannel();
             return true;
         }
         
@@ -103,5 +105,60 @@ public class HoneypotHelper implements IFilterHelper {
         mb.addEmbeds(eb.build());
         mb.addFiles(files);
         Messaging.logInfoMessage(mb.build());
+    }
+    
+    private void updateChannel() {
+        OffsetDateTime currentTime = OffsetDateTime.now();
+        int year = currentTime.getYear();
+        int month = currentTime.getMonthValue();
+        OffsetDateTime startOfMonth = OffsetDateTime.of(year, month, 1, 0, 0, 0, 0, ZoneOffset.UTC);
+        Optional<Integer> eventCountOpt = Database.getHoneypotEventCountSince(startOfMonth.toEpochSecond());
+        
+        if (eventCountOpt.isPresent()) {
+            StringBuilder sb = new StringBuilder()
+                    .append(HifumiBot.getSelf().getJDA().getSelfUser().getAsMention())
+                    .append(" killed ")
+                    .append(this.message.getAuthor().getAsMention());
+            
+            Integer eventCount = eventCountOpt.get();
+            boolean shouldRefresh = true;
+            
+            switch (eventCount) {
+                case 5 -> {
+                    sb.append("\nKilling spree!");
+                }
+                case 10 -> {
+                    sb.append("\nKilling frenzy!");
+                }
+                case 15 -> {
+                    sb.append("\nRunning riot!");
+                }
+                case 20 -> {
+                    sb.append("\nRampage!");
+                }
+                case 25 -> {
+                    sb.append("\nUntouchable!");
+                }
+                case 30 -> {
+                    sb.append("\nInvincible!");
+                }
+                case 35 -> {
+                    sb.append("\nInconceivable!");
+                }
+                default -> {
+                    shouldRefresh = false;
+                }
+            }
+            
+            MessageCreateBuilder mb = new MessageCreateBuilder();
+            mb.setContent(sb.toString());
+            Messaging.sendMessage(HifumiBot.getSelf().getConfig().honeypotOptions.channelId, mb.build());
+            
+            if (shouldRefresh) {
+                mb = new MessageCreateBuilder();
+                mb.setContent(HifumiBot.getSelf().getConfig().honeypotOptions.warningMessage);
+                Messaging.sendMessage(HifumiBot.getSelf().getConfig().honeypotOptions.channelId, mb.build());
+            }
+        }
     }
 }

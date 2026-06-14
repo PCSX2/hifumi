@@ -1925,6 +1925,29 @@ public class Database {
         return ret;
     }
     
+    public static Optional<Integer> getHoneypotEventCountSince(long startTimestamp) {
+        Optional<Integer> ret = Optional.empty();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
+        
+        try (PreparedStatement getHoneypotEvents = rConn.prepareStatement("""
+                SELECT COUNT(id) AS event_count
+                FROM honeypot_event
+                WHERE timestamp >= ? ;
+                """)) {
+            getHoneypotEvents.setLong(1, startTimestamp);
+            
+            try (ResultSet eventCount = getHoneypotEvents.executeQuery()) {
+                if (eventCount.next()) {
+                    ret = Optional.of(eventCount.getInt("event_count"));
+                }
+            }
+        } catch (SQLException e) {
+            Messaging.logException("Database", "getHoneypotEventsBetween", e);
+        }
+        
+        return ret;
+    }
+    
     public static ArrayList<SpamkickChartData> getHashMatchesBetween(long startTimestamp, long endTimestamp, String timeUnit) {
         ArrayList<SpamkickChartData> ret = new ArrayList<SpamkickChartData>();
         Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();

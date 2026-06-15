@@ -3,6 +3,7 @@ package net.pcsx2.hifumi.charting;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtils;
@@ -108,6 +109,8 @@ public class ChartGenerator {
         spamkickDataList.addAll(Database.getHoneypotEventsBetween(startTimestamp, endTimestamp, timeUnit));
         spamkickDataList.addAll(Database.getHashMatchesBetween(startTimestamp, endTimestamp, timeUnit));
         spamkickDataList.addAll(Database.getAntiBotEventsBetween(startTimestamp, endTimestamp, timeUnit));
+        Collections.sort(spamkickDataList);
+        
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
         
         for (SpamkickChartData data : spamkickDataList) {

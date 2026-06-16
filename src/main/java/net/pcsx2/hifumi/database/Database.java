@@ -771,6 +771,48 @@ public class Database {
         
         return ret;
     }
+    
+    public static ArrayList<MessageObject> getMessagesWithAttachmentsAggregateByChannelSinceTime(long userIdLong, long timestamp) {
+        ArrayList<MessageObject> ret = new ArrayList<MessageObject>();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
+
+        try (PreparedStatement getMessages = rConn.prepareStatement("""
+                SELECT m.message_id, m.fk_user, MAX(m.timestamp) AS max_timestamp, m.fk_channel
+                FROM message_attachment AS a
+                INNER JOIN message AS m ON m.message_id = a.fk_message
+                WHERE m.fk_user = ?
+                AND m.timestamp >= ?
+                GROUP BY m.fk_channel
+                ORDER BY m.timestamp DESC;
+                """)) {
+            getMessages.setLong(1, userIdLong);
+            getMessages.setLong(2, timestamp);
+            
+            try (ResultSet res = getMessages.executeQuery()) {
+                while (res.next()) {
+                    MessageObject messageObj = new MessageObject(
+                        res.getLong("message_id"),
+                        res.getLong("fk_user"),
+                        DateTimeUtils.longToOffsetDateTime(res.getLong("max_timestamp")),
+                        null,
+                        res.getLong("fk_channel"),
+                        null,
+                        null,
+                        null,
+                        null
+                    );
+
+                    ret.add(messageObj);
+                }
+            }
+
+            return ret;
+        } catch (SQLException e) {
+            Messaging.logException("Database", "getMessagesWithAttachmentsAggregateByChannelSinceTime", e);
+        }
+        
+        return ret;
+    }
 
     public static boolean insertWarezEvent(WarezEventObject warezEvent, User user) {
         Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();

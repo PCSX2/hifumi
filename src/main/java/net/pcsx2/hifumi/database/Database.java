@@ -771,6 +771,48 @@ public class Database {
         
         return ret;
     }
+    
+    public static ArrayList<MessageObject> getMessagesWithAttachmentsAggregateByChannelSinceTime(long userIdLong, long timestamp) {
+        ArrayList<MessageObject> ret = new ArrayList<MessageObject>();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
+
+        try (PreparedStatement getMessages = rConn.prepareStatement("""
+                SELECT m.message_id, m.fk_user, MAX(m.timestamp) AS max_timestamp, m.fk_channel
+                FROM message_attachment AS a
+                INNER JOIN message AS m ON m.message_id = a.fk_message
+                WHERE m.fk_user = ?
+                AND m.timestamp >= ?
+                GROUP BY m.fk_channel
+                ORDER BY m.timestamp DESC;
+                """)) {
+            getMessages.setLong(1, userIdLong);
+            getMessages.setLong(2, timestamp);
+            
+            try (ResultSet res = getMessages.executeQuery()) {
+                while (res.next()) {
+                    MessageObject messageObj = new MessageObject(
+                        res.getLong("message_id"),
+                        res.getLong("fk_user"),
+                        DateTimeUtils.longToOffsetDateTime(res.getLong("max_timestamp")),
+                        null,
+                        res.getLong("fk_channel"),
+                        null,
+                        null,
+                        null,
+                        null
+                    );
+
+                    ret.add(messageObj);
+                }
+            }
+
+            return ret;
+        } catch (SQLException e) {
+            Messaging.logException("Database", "getMessagesWithAttachmentsAggregateByChannelSinceTime", e);
+        }
+        
+        return ret;
+    }
 
     public static boolean insertWarezEvent(WarezEventObject warezEvent, User user) {
         Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
@@ -1931,8 +1973,9 @@ public class Database {
         
         try (PreparedStatement getHoneypotEvents = rConn.prepareStatement("""
                 SELECT COUNT(id) AS event_count
-                FROM honeypot_event
-                WHERE timestamp >= ? ;
+                FROM spamkick_event
+                WHERE timestamp >= ?
+                AND type = "honeypot";
                 """)) {
             getHoneypotEvents.setLong(1, startTimestamp);
             
@@ -1942,7 +1985,7 @@ public class Database {
                 }
             }
         } catch (SQLException e) {
-            Messaging.logException("Database", "getHoneypotEventsBetween", e);
+            Messaging.logException("Database", "getHoneypotEventCountSince", e);
         }
         
         return ret;
@@ -2007,6 +2050,63 @@ public class Database {
                     data.timeUnit = latestEvent.getString("timeUnit");
                     data.events = latestEvent.getInt("events");
                     data.trigger = "antibot";
+                    ret.add(data);
+                }
+            }
+        } catch (SQLException e) {
+            Messaging.logException("Database", "getAntiBotEventsBetween", e);
+        }
+        
+        return ret;
+    }
+    
+    public static void insertSpamkickEvent(long timestamp, long userId, String type, Optional<Long> messageIdOpt) {
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+        
+        try (PreparedStatement insertSpamkick = wConn.prepareStatement("""
+                INSERT INTO spamkick_event (timestamp, fk_user, type, fk_message)
+                VALUES (?, ?, ?, ?);
+                """)) {
+            insertSpamkick.setLong(1, timestamp);
+            insertSpamkick.setLong(2, userId);
+            insertSpamkick.setString(3, type);
+            
+            if (messageIdOpt.isPresent()) {
+                insertSpamkick.setLong(4, messageIdOpt.get());
+            } else {
+                insertSpamkick.setNull(4, Types.BIGINT);
+            }
+            
+            insertSpamkick.executeUpdate();
+        } catch (SQLException e) {
+            Messaging.logException("Database", "insertScamHash", e);
+        }
+    }
+    
+    public static ArrayList<SpamkickChartData> getSpamkickEventsBetween(long startTimestamp, long endTimestamp, String timeUnit) {
+        ArrayList<SpamkickChartData> ret = new ArrayList<SpamkickChartData>();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
+        String formatStr = TimeUtils.getSQLFormatStringFromTimeUnit(timeUnit);
+        
+        try (PreparedStatement getSpamkickEvents = rConn.prepareStatement("""
+                SELECT COUNT(id) AS events, STRFTIME(?, DATETIME(timestamp, 'unixepoch')) AS timeUnit, type
+                FROM spamkick_event
+                WHERE timestamp >= ?
+                AND timestamp <= ?
+                GROUP BY STRFTIME(?, DATETIME(timestamp, 'unixepoch')), type
+                ORDER BY timestamp ASC;
+                """)) {
+            getSpamkickEvents.setString(1, formatStr);
+            getSpamkickEvents.setLong(2, startTimestamp);
+            getSpamkickEvents.setLong(3, endTimestamp);
+            getSpamkickEvents.setString(4, formatStr);
+            
+            try (ResultSet latestEvent = getSpamkickEvents.executeQuery()) {
+                while (latestEvent.next()) {
+                    SpamkickChartData data = new SpamkickChartData();
+                    data.timeUnit = latestEvent.getString("timeUnit");
+                    data.events = latestEvent.getInt("events");
+                    data.trigger = latestEvent.getString("type");
                     ret.add(data);
                 }
             }

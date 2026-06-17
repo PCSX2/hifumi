@@ -3,13 +3,15 @@ package net.pcsx2.hifumi.moderation;
 import java.awt.Color;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
-import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel;
 import net.dv8tion.jda.api.exceptions.InsufficientPermissionException;
 import net.pcsx2.hifumi.HifumiBot;
 import net.pcsx2.hifumi.database.Database;
@@ -39,8 +41,8 @@ public class ModActions {
         for (MessageObject message : messageList) {
             GuildChannel channel = HifumiBot.getSelf().getJDA().getGuildChannelById(message.getChannelId());
             
-            if (channel != null && channel instanceof MessageChannel) {
-                MessageChannel mChannel = (MessageChannel) channel;
+            if (channel != null && channel instanceof GuildMessageChannel) {
+                GuildMessageChannel mChannel = (GuildMessageChannel) channel;
                 mChannel.deleteMessageById(message.getMessageId()).queue();
             }
         }
@@ -52,11 +54,15 @@ public class ModActions {
         for (MessageObject message : messageList) {
             GuildChannel channel = HifumiBot.getSelf().getJDA().getGuildChannelById(message.getChannelId());
             
-            if (channel != null && channel instanceof MessageChannel) {
-                MessageChannel mChannel = (MessageChannel) channel;
+            if (channel != null && channel instanceof GuildMessageChannel) {
+                GuildMessageChannel mChannel = (GuildMessageChannel) channel;
                 mChannel.deleteMessageById(message.getMessageId()).queue();
             }
         }
+    }
+    
+    public static boolean timeoutAndNotifyUser(Guild server, String userId) {
+        return timeoutAndNotifyUser(server, Long.valueOf(userId));
     }
 
     public static boolean timeoutAndNotifyUser(Guild server, long userIdLong) {
@@ -84,12 +90,17 @@ public class ModActions {
         
         return false;
     }
+    
+    public static boolean kickAndNotifyUser(Guild server, String userId) {
+        return kickAndNotifyUser(server, Long.valueOf(userId));
+    }
 
     public static boolean kickAndNotifyUser(Guild server, long userIdLong) {
         Log.info("Kick and notify action start");
 
         try {
             Member member = server.retrieveMemberById(userIdLong).complete();
+            User memberAsUser = member.getUser();
             Log.info("Kick and notify member retrieved");
 
             if (member != null) {
@@ -102,7 +113,8 @@ public class ModActions {
                 Log.info("Kick and notify sending dm");
                 Messaging.sendPrivateMessageEmbed(member.getUser(), eb.build());
                 Log.info("Kick and notify kicking user");
-                member.kick().complete();
+                member.ban(60, TimeUnit.MINUTES).complete();
+                server.unban(memberAsUser).complete();
                 Log.info("Kick and notify returning true");
                 return true;
             }

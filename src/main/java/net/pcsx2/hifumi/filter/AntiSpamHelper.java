@@ -58,8 +58,16 @@ public class AntiSpamHelper implements IFilterHelper {
                 mb.addEmbeds(eb.build());
                 mb.addFiles(files);
                 mb.addComponents(ActionRow.of(
-                    Button.of(ButtonStyle.DANGER, "imagescam:dospamkick:" + usr.getIdLong(), "Looks like a bot scam, kick user"), 
-                    Button.of(ButtonStyle.SUCCESS, "imagescam:clear:" + usr.getIdLong(), "Looks innocent, remove timeout")
+                    Button.of(
+                            ButtonStyle.DANGER,
+                            "spamkick:execute:" + usr.getId() + ":" + this.message.getId() + ":spam_fast",
+                            "Looks like a bot scam, kick user"
+                    ), 
+                    Button.of(
+                            ButtonStyle.SUCCESS, 
+                            "spamkick:clear:" + usr.getId() + ":" + this.message.getId() + ":spam_fast",
+                            "Looks innocent, remove timeout"
+                    )
                 ));
                 
                 Messaging.sendMessage(HifumiBot.getSelf().getConfig().channels.systemOutputChannelId, mb.build());

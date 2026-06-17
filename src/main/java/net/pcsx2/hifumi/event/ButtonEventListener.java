@@ -13,7 +13,6 @@ import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.buttons.ButtonStyle;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.pcsx2.hifumi.HifumiBot;
@@ -25,7 +24,6 @@ import net.pcsx2.hifumi.database.Database;
 import net.pcsx2.hifumi.moderation.ModActions;
 import net.pcsx2.hifumi.util.MemberUtils;
 import net.pcsx2.hifumi.util.Messaging;
-import net.pcsx2.hifumi.util.UserUtils;
 
 public class ButtonEventListener extends ListenerAdapter {
 
@@ -46,6 +44,9 @@ public class ButtonEventListener extends ListenerAdapter {
             String reply = null;
 
             switch (parts[0]) {
+                case "spamkick":
+                    this.handleSpamkick(event, parts[1], parts[2], parts[3], parts[4]);
+                    break;
                 case "server-metadata":
                     CommandServerMetadata commandServerMetadata = (CommandServerMetadata) slashCommands.get("server-metadata");
                     event.deferEdit().queue();
@@ -111,6 +112,7 @@ public class ButtonEventListener extends ListenerAdapter {
 
                     event.reply(reply).queue();
                     break;
+                    /*
                 case "imagescam":
                     try {
                         if (event.getMember().hasPermission(Permission.KICK_MEMBERS)) {
@@ -135,7 +137,7 @@ public class ButtonEventListener extends ListenerAdapter {
                                     ActionRow actionRow = ActionRow.of(button);
                                     event.getHook().editMessageComponentsById(event.getMessageId(), actionRow).complete();
                                     event.getMessage().editMessageAttachments(List.of()).complete();
-                                    Database.insertAntiBotEvent(event.getTimeCreated().toEpochSecond(), userIdLong);
+                                    Database.insertSpamkickEvent(event.getTimeCreated().toEpochSecond(), userIdLong, "filter_reviewed", Optional.empty());
                                 }
                                 case "clear" -> {
                                     Optional<Member> memberOpt = MemberUtils.getOrRetrieveMember(event.getGuild(), userIdLong);
@@ -169,7 +171,83 @@ public class ButtonEventListener extends ListenerAdapter {
                     }
                     
                     break;
+                    */
             }
         });
+    }
+    
+    /**
+     * Handles spamkick type button events of all types.
+     * @param event - The event for the button interaction.
+     * @param action - The action the clicked button is for.
+     * @param userIdLong - The ID of the user, long format.
+     * @param relatedMessageIdLong - The ID of the message which triggered a spamkick review process, long format.
+     * @param type - The type of review process that was triggered.
+     */
+    private void handleSpamkick(ButtonInteractionEvent event, String action, String userId, String relatedMessageId, String type) {
+        if (!event.getMember().hasPermission(Permission.KICK_MEMBERS)) {
+            event.reply("You do not have permission to do this")
+                    .setEphemeral(true)
+                    .queue();
+            return;
+        }
+        
+        Optional<Member> memberOpt = MemberUtils.getOrRetrieveMember(event.getGuild(), userId);
+        
+        switch (action) {
+            case "execute" -> {
+                ModActions.kickAndNotifyUser(event.getGuild(), userId);
+                event.reply("Messaged user telling them we think they are a bot, and kicked them from the server.")
+                        .setComponents(new ArrayList<MessageTopLevelComponent>())
+                        .setEphemeral(true)
+                        .queue();
+                Button button = Button.of(
+                        ButtonStyle.PRIMARY, 
+                        "spamkick:resolved:" + userId + ":" + relatedMessageId + ":" + type, 
+                        "Resolved by " + event.getUser().getEffectiveName() + " (kicked user)"
+                );
+                ActionRow actionRow = ActionRow.of(button);
+                event.getHook().editMessageComponentsById(event.getMessageId(), actionRow).complete();
+                event.getMessage().editMessageAttachments(List.of()).complete();
+                Database.insertSpamkickEvent(
+                        event.getTimeCreated().toEpochSecond(), 
+                        Long.valueOf(userId), 
+                        type, 
+                        Optional.of(Long.valueOf(relatedMessageId))
+                );
+            }
+            case "clear" -> {
+                if (memberOpt.isPresent()) {
+                    Member member = memberOpt.get();
+                    member.removeTimeout().queue();
+                    event.reply("Timeout removed from user")
+                            .setEphemeral(true)
+                            .queue();
+                } else {
+                    event.reply("User could not be retrieved, did they already leave?")
+                            .setEphemeral(true)
+                            .queue();
+                }
+                
+                Button button = Button.of(
+                        ButtonStyle.PRIMARY,
+                        "spamkick:resolved:" + userId + ":" + relatedMessageId + ":" + type,
+                        "Resolved by " + event.getUser().getEffectiveName() + " (removed timeout)"
+                );
+                ActionRow actionRow = ActionRow.of(button);
+                event.getHook().editMessageComponentsById(event.getMessageId(), actionRow).complete();
+                event.getMessage().editMessageAttachments(List.of()).complete();
+            }
+            case "resolved" -> {
+                event.reply("This event has already been resolved.")
+                        .setEphemeral(true)
+                        .queue();
+            }
+            default -> {
+                event.reply("Invalid action `" + action + "`, either you did something evil or I am breaking horribly.")
+                        .setEphemeral(true)
+                        .queue();
+            }
+        }
     }
 }

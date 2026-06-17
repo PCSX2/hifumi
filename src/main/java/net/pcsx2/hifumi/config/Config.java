@@ -50,6 +50,7 @@ public class Config implements IConfig {
     public SerializedEmbed warezPrompt;
     public SerializedEmbed unwarezPrompt;
     public HoneypotOptions honeypotOptions;
+    public AntiAttachmentOptions antiAttachmentOptions;
 
     public Config() {
         channels = new Channels();
@@ -65,6 +66,7 @@ public class Config implements IConfig {
         warezPrompt = new SerializedEmbed();
         unwarezPrompt = new SerializedEmbed();
         honeypotOptions = new HoneypotOptions();
+        antiAttachmentOptions = new AntiAttachmentOptions();
     }
 
     public class Logging {
@@ -228,6 +230,16 @@ public class Config implements IConfig {
             roleId = new String("");
             channelId = new String("");
             warningMessage = new String("");
+        }
+    }
+    
+    public class AntiAttachmentOptions {
+        public int cooldownSeconds;
+        public int maxMessages;
+        
+        public AntiAttachmentOptions() {
+            cooldownSeconds = 90;
+            maxMessages = 3;
         }
     }
 }

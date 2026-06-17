@@ -104,10 +104,7 @@ public class ChartGenerator {
     
     public static byte[] buildSpamkickLineChart(long startTimestamp, long endTimestamp, String timeUnit) {
         ArrayList<SpamkickChartData> spamkickDataList = new ArrayList<SpamkickChartData>();
-        spamkickDataList.addAll(Database.getSpamkickCommandEventsBetween(startTimestamp, endTimestamp, timeUnit));
-        spamkickDataList.addAll(Database.getHoneypotEventsBetween(startTimestamp, endTimestamp, timeUnit));
-        spamkickDataList.addAll(Database.getHashMatchesBetween(startTimestamp, endTimestamp, timeUnit));
-        spamkickDataList.addAll(Database.getAntiBotEventsBetween(startTimestamp, endTimestamp, timeUnit));
+        spamkickDataList.addAll(Database.getSpamkickEventsBetween(startTimestamp, endTimestamp, timeUnit));
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
         
         for (SpamkickChartData data : spamkickDataList) {

@@ -70,8 +70,6 @@ public class HoneypotHelper implements IFilterHelper {
             // Smite them
             ModActions.kickAndNotifyUser(server, member.getIdLong());
             OffsetDateTime currentTime = OffsetDateTime.now();
-            OffsetDateTime cutoffTime = currentTime.minusMinutes(AGE_MINUTES_TO_REMOVE_MESSAGES);
-            ModActions.deleteAllMessageFromUserSince(member.getIdLong(), cutoffTime.toEpochSecond());
             Database.insertSpamkickEvent(currentTime.toEpochSecond(), member.getIdLong(), "honeypot", Optional.of(this.message.getIdLong()));
             this.notifyStaff();
             this.updateChannel();

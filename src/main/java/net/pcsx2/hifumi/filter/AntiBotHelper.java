@@ -77,7 +77,7 @@ public class AntiBotHelper implements IFilterHelper {
             }
         }
 
-        return true;
+        return false;
     }
     
     private void sendTimeoutNotice() {

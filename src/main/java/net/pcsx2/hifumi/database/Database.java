@@ -1973,8 +1973,9 @@ public class Database {
         
         try (PreparedStatement getHoneypotEvents = rConn.prepareStatement("""
                 SELECT COUNT(id) AS event_count
-                FROM honeypot_event
-                WHERE timestamp >= ? ;
+                FROM spamkick_event
+                WHERE timestamp >= ?
+                AND type = "honeypot";
                 """)) {
             getHoneypotEvents.setLong(1, startTimestamp);
             
@@ -1984,7 +1985,7 @@ public class Database {
                 }
             }
         } catch (SQLException e) {
-            Messaging.logException("Database", "getHoneypotEventsBetween", e);
+            Messaging.logException("Database", "getHoneypotEventCountSince", e);
         }
         
         return ret;

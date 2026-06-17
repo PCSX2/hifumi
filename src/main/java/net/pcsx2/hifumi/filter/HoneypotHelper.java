@@ -1,8 +1,11 @@
 package net.pcsx2.hifumi.filter;
 
 import java.awt.Color;
+import java.time.DayOfWeek;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Optional;
 
@@ -106,20 +109,60 @@ public class HoneypotHelper implements IFilterHelper {
     }
     
     private void updateChannel() {
-        OffsetDateTime currentTime = OffsetDateTime.now();
-        int year = currentTime.getYear();
-        int month = currentTime.getMonthValue();
-        OffsetDateTime startOfMonth = OffsetDateTime.of(year, month, 1, 0, 0, 0, 0, ZoneOffset.UTC);
-        Optional<Integer> eventCountOpt = Database.getHoneypotEventCountSince(startOfMonth.toEpochSecond());
+        boolean shouldRefresh = true;
+        OffsetDateTime currentTime = OffsetDateTime.now(ZoneOffset.UTC);
+        StringBuilder sb = new StringBuilder()
+                .append(HifumiBot.getSelf().getJDA().getSelfUser().getAsMention())
+                .append(" killed ")
+                .append(this.message.getAuthor().getAsMention());
         
-        if (eventCountOpt.isPresent()) {
-            StringBuilder sb = new StringBuilder()
-                    .append(HifumiBot.getSelf().getJDA().getSelfUser().getAsMention())
-                    .append(" killed ")
-                    .append(this.message.getAuthor().getAsMention());
+        // Calculate our multi-kill level
+        OffsetDateTime startOfDay = currentTime.truncatedTo(ChronoUnit.DAYS);
+        Optional<Integer> multiEventCountOpt = Database.getHoneypotEventCountSince(startOfDay.toEpochSecond());
+        
+        if (multiEventCountOpt.isPresent()) {
+            Integer eventCount = multiEventCountOpt.get();
             
-            Integer eventCount = eventCountOpt.get();
-            boolean shouldRefresh = true;
+            switch (eventCount) {
+                case 2 -> {
+                    sb.append("\nDouble kill!");
+                }
+                case 3 -> {
+                    sb.append("\nTriple kill!");
+                }
+                case 4 -> {
+                    sb.append("\nOverkill!");
+                }
+                case 5 -> {
+                    sb.append("\nKilltacular!");
+                }
+                case 6 -> {
+                    sb.append("\nKilltrocity!");
+                }
+                case 7 -> {
+                    sb.append("\nKillimanjaro!");
+                }
+                case 8 -> {
+                    sb.append("\nKilltastrophe!");
+                }
+                case 9 -> {
+                    sb.append("\nKillpocalypse!");
+                }
+                case 10 -> {
+                    sb.append("\nKillionaire!");
+                }
+                default -> {
+                    
+                }
+            }
+        }
+        
+        // Calculate our killing spree level
+        OffsetDateTime startOfWeek = currentTime.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).truncatedTo(ChronoUnit.DAYS);
+        Optional<Integer> spreeEventCountOpt = Database.getHoneypotEventCountSince(startOfWeek.toEpochSecond());
+        
+        if (spreeEventCountOpt.isPresent()) {
+            Integer eventCount = spreeEventCountOpt.get();
             
             switch (eventCount) {
                 case 5 -> {
@@ -147,16 +190,16 @@ public class HoneypotHelper implements IFilterHelper {
                     shouldRefresh = false;
                 }
             }
-            
-            MessageCreateBuilder mb = new MessageCreateBuilder();
-            mb.setContent(sb.toString());
+        }
+        
+        MessageCreateBuilder mb = new MessageCreateBuilder();
+        mb.setContent(sb.toString());
+        Messaging.sendMessage(HifumiBot.getSelf().getConfig().honeypotOptions.channelId, mb.build());
+        
+        if (shouldRefresh) {
+            mb = new MessageCreateBuilder();
+            mb.setContent(HifumiBot.getSelf().getConfig().honeypotOptions.warningMessage);
             Messaging.sendMessage(HifumiBot.getSelf().getConfig().honeypotOptions.channelId, mb.build());
-            
-            if (shouldRefresh) {
-                mb = new MessageCreateBuilder();
-                mb.setContent(HifumiBot.getSelf().getConfig().honeypotOptions.warningMessage);
-                Messaging.sendMessage(HifumiBot.getSelf().getConfig().honeypotOptions.channelId, mb.build());
-            }
         }
     }
 }

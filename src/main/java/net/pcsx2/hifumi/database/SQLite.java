@@ -55,7 +55,9 @@ public class SQLite {
         "017-create-scam-hash-table.sql",
         "018-create-scam-hash-match-table.sql",
         "019-create-honeypot-event-table.sql",
-        "020-create-antibot-event-table.sql"
+        "020-create-antibot-event-table.sql",
+        "021-create-spamkick-event-table.sql",
+        "022-create-spamkick-event-timestamp-index.sql"
     };
 
     private void ensureDatabaseIsInitialized(Connection conn) {

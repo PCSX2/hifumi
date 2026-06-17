@@ -53,8 +53,16 @@ public class AntiForwardHelper implements IFilterHelper {
                 MessageCreateBuilder mb = new MessageCreateBuilder();
                 mb.addEmbeds(eb.build());
                 mb.addComponents(ActionRow.of(
-                    Button.of(ButtonStyle.DANGER, "imagescam:dospamkick:" + user.getIdLong(), "Looks like a bot scam, kick user"), 
-                    Button.of(ButtonStyle.SUCCESS, "imagescam:clear:" + user.getIdLong(), "Looks innocent, remove timeout")
+                    Button.of(
+                            ButtonStyle.DANGER, 
+                            "spamkick:execute:" + user.getId() + ":" + this.message.getId() + ":anti_forward",
+                            "Looks like a bot scam, kick user"
+                    ), 
+                    Button.of(
+                            ButtonStyle.SUCCESS, 
+                            "spamkick:clear:" + user.getId() + ":" + this.message.getId() + ":anti_forward",
+                            "Looks innocent, remove timeout"
+                    )
                 ));
                 
                 Messaging.sendMessage(HifumiBot.getSelf().getConfig().channels.systemOutputChannelId, mb.build());

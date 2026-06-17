@@ -2058,4 +2058,61 @@ public class Database {
         
         return ret;
     }
+    
+    public static void insertSpamkickEvent(long timestamp, long userId, String type, Optional<Long> messageIdOpt) {
+        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+        
+        try (PreparedStatement insertSpamkick = wConn.prepareStatement("""
+                INSERT INTO spamkick_event (timestamp, fk_user, type, fk_message)
+                VALUES (?, ?, ?, ?);
+                """)) {
+            insertSpamkick.setLong(1, timestamp);
+            insertSpamkick.setLong(2, userId);
+            insertSpamkick.setString(3, type);
+            
+            if (messageIdOpt.isPresent()) {
+                insertSpamkick.setLong(4, messageIdOpt.get());
+            } else {
+                insertSpamkick.setNull(4, Types.BIGINT);
+            }
+            
+            insertSpamkick.executeUpdate();
+        } catch (SQLException e) {
+            Messaging.logException("Database", "insertScamHash", e);
+        }
+    }
+    
+    public static ArrayList<SpamkickChartData> getSpamkickEventsBetween(long startTimestamp, long endTimestamp, String timeUnit) {
+        ArrayList<SpamkickChartData> ret = new ArrayList<SpamkickChartData>();
+        Connection rConn = HifumiBot.getSelf().getSQLite().getReadConnection();
+        String formatStr = TimeUtils.getSQLFormatStringFromTimeUnit(timeUnit);
+        
+        try (PreparedStatement getSpamkickEvents = rConn.prepareStatement("""
+                SELECT COUNT(id) AS events, STRFTIME(?, DATETIME(timestamp, 'unixepoch')) AS timeUnit, type
+                FROM spamkick_event
+                WHERE timestamp >= ?
+                AND timestamp <= ?
+                GROUP BY STRFTIME(?, DATETIME(timestamp, 'unixepoch')), type
+                ORDER BY timestamp ASC;
+                """)) {
+            getSpamkickEvents.setString(1, formatStr);
+            getSpamkickEvents.setLong(2, startTimestamp);
+            getSpamkickEvents.setLong(3, endTimestamp);
+            getSpamkickEvents.setString(4, formatStr);
+            
+            try (ResultSet latestEvent = getSpamkickEvents.executeQuery()) {
+                while (latestEvent.next()) {
+                    SpamkickChartData data = new SpamkickChartData();
+                    data.timeUnit = latestEvent.getString("timeUnit");
+                    data.events = latestEvent.getInt("events");
+                    data.trigger = latestEvent.getString("type");
+                    ret.add(data);
+                }
+            }
+        } catch (SQLException e) {
+            Messaging.logException("Database", "getAntiBotEventsBetween", e);
+        }
+        
+        return ret;
+    }
 }

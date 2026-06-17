@@ -85,8 +85,16 @@ public class AntiAttachmentHelper implements IFilterHelper {
         mb.addEmbeds(eb.build());
         mb.addFiles(files);
         mb.addComponents(ActionRow.of(
-            Button.of(ButtonStyle.DANGER, "imagescam:dospamkick:" + this.user.getIdLong(), "Looks like a bot scam, kick user"), 
-            Button.of(ButtonStyle.SUCCESS, "imagescam:clear:" + this.user.getIdLong(), "Looks innocent, remove timeout")
+            Button.of(
+                    ButtonStyle.DANGER, 
+                    "spamkick:execute:" + this.user.getId() + ":" + this.message.getId() + ":spam_attachment", 
+                    "Looks like a bot scam, kick user"
+            ), 
+            Button.of(
+                    ButtonStyle.SUCCESS, 
+                    "spamkick:clear:" + this.user.getId() + ":" + this.message.getId() + ":spam_attachment", 
+                    "Looks innocent, remove timeout"
+            )
         ));
         
         Messaging.sendMessage(HifumiBot.getSelf().getConfig().channels.systemOutputChannelId, mb.build());

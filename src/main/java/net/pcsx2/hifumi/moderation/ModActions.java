@@ -58,6 +58,10 @@ public class ModActions {
             }
         }
     }
+    
+    public static boolean timeoutAndNotifyUser(Guild server, String userId) {
+        return timeoutAndNotifyUser(server, Long.valueOf(userId));
+    }
 
     public static boolean timeoutAndNotifyUser(Guild server, long userIdLong) {
         try {
@@ -84,6 +88,10 @@ public class ModActions {
         
         return false;
     }
+    
+    public static boolean kickAndNotifyUser(Guild server, String userId) {
+        return kickAndNotifyUser(server, Long.valueOf(userId));
+    }
 
     public static boolean kickAndNotifyUser(Guild server, long userIdLong) {
         Log.info("Kick and notify action start");
@@ -102,7 +110,7 @@ public class ModActions {
                 Log.info("Kick and notify sending dm");
                 Messaging.sendPrivateMessageEmbed(member.getUser(), eb.build());
                 Log.info("Kick and notify kicking user");
-                member.kick().complete();
+                //member.kick().complete();
                 Log.info("Kick and notify returning true");
                 return true;
             }

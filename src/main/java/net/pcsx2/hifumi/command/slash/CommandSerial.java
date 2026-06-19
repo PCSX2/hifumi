@@ -8,11 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.lang3.StringUtils;
-
-import net.pcsx2.hifumi.HifumiBot;
-import net.pcsx2.hifumi.command.AbstractSlashCommand;
-import net.pcsx2.hifumi.util.Messaging;
+import org.apache.commons.lang3.Strings;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
@@ -22,6 +18,9 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.pcsx2.hifumi.HifumiBot;
+import net.pcsx2.hifumi.command.AbstractSlashCommand;
+import net.pcsx2.hifumi.util.Messaging;
 
 public class CommandSerial extends AbstractSlashCommand {
 
@@ -65,7 +64,7 @@ public class CommandSerial extends AbstractSlashCommand {
                 nameEn = ((String) entryMap.get("name-en"));
             }
             
-            if (StringUtils.containsIgnoreCase(name, normalized) || StringUtils.containsIgnoreCase(nameSort, normalized) || StringUtils.containsIgnoreCase(nameEn, normalized)) {
+            if (Strings.CI.contains(name, normalized) || Strings.CI.contains(nameSort, normalized) || Strings.CI.contains(nameEn, normalized)) {
                 LinkedHashMap<String, String> attributes = new LinkedHashMap<String, String>();
                 attributes.put("Name", name);
 

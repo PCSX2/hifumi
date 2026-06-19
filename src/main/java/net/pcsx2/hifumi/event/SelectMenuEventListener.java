@@ -1,8 +1,5 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
-
+// SPDX-FileCopyrightText: 2026 PCSX2 Dev Team
+// SPDX-License-Identifier: MIT
 package net.pcsx2.hifumi.event;
 
 import java.util.HashMap;

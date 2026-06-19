@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 PCSX2 Dev Team
+// SPDX-License-Identifier: MIT
 package net.pcsx2.hifumi.command.context;
 
 import net.pcsx2.hifumi.HifumiBot;

@@ -122,8 +122,6 @@ public class CommandServerMetadata extends AbstractSlashCommand {
             return;
         }
         
-        String userId = parts[3];
-
         // Test if the event that originally created the browsable embed is in memory.
         BrowsableEmbed existingBrowsableEmbed = BrowsableEmbed.embedCache.get(eventId);
 

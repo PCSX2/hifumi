@@ -40,6 +40,7 @@ public class ScamHashHelper implements IFilterHelper {
         boolean res = this.evaluate();
         
         if (res) {
+            ModActions.timeoutAndNotifyUser(this.message.getGuild(), this.message.getAuthor().getId());
             this.autoKick();
             this.notifyStaff();
         }

@@ -73,6 +73,7 @@ public class HoneypotHelper implements IFilterHelper {
         // If not the honeypot channel, but they have the role
         } else if (RoleUtils.memberHasRole(member, honeypotRoleId)) {
             // Smite them
+            ModActions.timeoutAndNotifyUser(this.message.getGuild(), this.message.getAuthor().getId());
             ModActions.kickAndNotifyUser(server, member.getIdLong());
             OffsetDateTime currentTime = OffsetDateTime.now();
             Database.insertSpamkickEvent(currentTime.toEpochSecond(), member.getIdLong(), "honeypot", Optional.of(this.message.getIdLong()));

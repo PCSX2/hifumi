@@ -9,7 +9,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         
         <!-- Dependency Versions -->
-        <jda.version>6.4.2</jda.version> <!-- https://central.sonatype.com/artifact/net.dv8tion/JDA -->
+        <jda.version>6.5.0</jda.version> <!-- https://central.sonatype.com/artifact/net.dv8tion/JDA -->
         <slf4j.version>2.0.18</slf4j.version> <!-- https://central.sonatype.com/artifact/org.slf4j/slf4j-api -->
         <jsoup.version>1.22.2</jsoup.version> <!-- https://central.sonatype.com/artifact/org.jsoup/jsoup -->
         <commonslang.version>3.20.0</commonslang.version> <!-- https://central.sonatype.com/artifact/org.apache.commons/commons-lang3 -->
@@ -17,13 +17,13 @@
         <gson.version>2.14.0</gson.version> <!-- https://central.sonatype.com/artifact/com.google.code.gson/gson -->
         <snakeyaml.version>2.6</snakeyaml.version> <!-- https://central.sonatype.com/artifact/org.yaml/snakeyaml -->
         <deepl.version>1.16.0</deepl.version> <!-- https://central.sonatype.com/artifact/com.deepl.api/deepl-java -->
-        <sqlite.version>3.53.2.0</sqlite.version> <!-- https://central.sonatype.com/artifact/org.xerial/sqlite-jdbc -->
+        <sqlite.version>3.53.2.1</sqlite.version> <!-- https://central.sonatype.com/artifact/org.xerial/sqlite-jdbc -->
         <jfreechart.version>1.5.6</jfreechart.version> <!-- https://central.sonatype.com/artifact/org.jfree/jfreechart -->
         <ini4j.version>0.5.4</ini4j.version> <!-- https://central.sonatype.com/artifact/org.ini4j/ini4j -->
         
         <!-- Maven Plugin Versions -->
         <maven-dependency-plugin.version>3.11.0</maven-dependency-plugin.version> <!-- https://central.sonatype.com/artifact/org.apache.maven.plugins/maven-dependency-plugin -->
-        <maven-jar-plugin.version>3.5.0</maven-jar-plugin.version> <!-- https://central.sonatype.com/artifact/org.apache.maven.plugins/maven-jar-plugin -->
+        <maven-jar-plugin.version>3.5.1</maven-jar-plugin.version> <!-- https://central.sonatype.com/artifact/org.apache.maven.plugins/maven-jar-plugin -->
         <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version> <!-- https://central.sonatype.com/artifact/org.apache.maven.plugins/maven-shade-plugin -->
     </properties>
     

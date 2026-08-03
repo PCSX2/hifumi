@@ -29,7 +29,7 @@ public class AttachmentUtils {
                 URL url = URL.of(URI.create(attachment.getProxyUrl()), null);
                 
                 try (BufferedInputStream stream = new BufferedInputStream(url.openStream())) {
-                    FileUpload file = FileUpload.fromData(stream, attachment.getFileName()).asSpoiler();
+                    FileUpload file = FileUpload.fromData(stream.readAllBytes(), attachment.getFileName()).asSpoiler();
                     files.add(file);
                 }
             } catch (Exception e) {

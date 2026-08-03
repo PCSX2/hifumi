@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
 import net.pcsx2.hifumi.util.EmbedUtil;
@@ -165,23 +166,27 @@ public class GameIndex implements Refreshable {
     private Map<String, Object> map;
     
     public GameIndex() {
-        
+
     }
-    
+
     @Override
     public void refresh() {
         Request req = new Request.Builder().url(GAMEINDEX_LOCATION).get().build();
-        
+
         try {
             Response res = HifumiBot.getSelf().getHttpClient().newCall(req).execute();
-            
+
             if (res.isSuccessful()) {
-                Yaml yaml = new Yaml();
+                LoaderOptions lo = new LoaderOptions();
+                // Arbitrary amount, the gamedb should probably not exceed this.
+                lo.setMaxAliasesForCollections(500);
+
+                Yaml yaml = new Yaml(lo);
                 map = yaml.load(res.body().charStream());
             }
 
             this.isInitialized = true;
-        } catch (IOException e) {
+        } catch (Exception e) {
             Messaging.logException("GameIndex", "refresh", e);
         }
     }

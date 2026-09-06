@@ -19,6 +19,7 @@ public class Scheduler {
     private ScheduledExecutorService threadPool;
     private ExecutorService messageEventFIFO;
     private ExecutorService messageFilterFIFO;
+    private ExecutorService databaseWriteQueue;
     private HashMap<String, Runnable> runnables = new HashMap<String, Runnable>();
     private HashMap<String, ScheduledFuture<?>> statuses = new HashMap<String, ScheduledFuture<?>>();
 
@@ -26,6 +27,7 @@ public class Scheduler {
         this.threadPool = Executors.newScheduledThreadPool(6, new SchedulerThreadFactory("pool"));
         this.messageEventFIFO = Executors.newSingleThreadExecutor(new SchedulerThreadFactory("msg-evt-fifo"));
         this.messageFilterFIFO = Executors.newSingleThreadExecutor(new SchedulerThreadFactory("msg-flt-fifo"));
+        this.databaseWriteQueue = Executors.newSingleThreadExecutor(new SchedulerThreadFactory("db-write-queue"));
     }
 
     public void addToMessageEventFIFO(Runnable runnable) {
@@ -34,6 +36,10 @@ public class Scheduler {
     
     public void addToMessageFilterFIFO(MessageFilteringRunnable runnable) {
         this.messageFilterFIFO.execute(runnable);
+    }
+    
+    public void addToDatabaseWriteFIFO(Runnable runnable) {
+        this.databaseWriteQueue.execute(runnable);
     }
 
     /**

@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.Message.Attachment;
@@ -51,87 +53,89 @@ public class Database {
      * Store user, channel, message, attachment, and event records
      */
     public static void insertMessage(Message message) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-
-        try (PreparedStatement insertUser = wConn.prepareStatement("""
-                INSERT INTO user (discord_id, created_datetime, username)
-                VALUES (?, ?, ?)
-                ON CONFLICT (discord_id) DO NOTHING;
-                """)) {
-            insertUser.setLong(1, message.getAuthor().getIdLong());
-            insertUser.setLong(2, message.getAuthor().getTimeCreated().toEpochSecond());
-            insertUser.setString(3, message.getAuthor().getName());
-            insertUser.executeUpdate();
-
-            try (PreparedStatement insertChannel = wConn.prepareStatement("""
-                    INSERT INTO channel (discord_id, name)
-                    VALUES (?, ?)
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+    
+            try (PreparedStatement insertUser = wConn.prepareStatement("""
+                    INSERT INTO user (discord_id, created_datetime, username)
+                    VALUES (?, ?, ?)
                     ON CONFLICT (discord_id) DO NOTHING;
                     """)) {
-                insertChannel.setLong(1, message.getChannel().getIdLong());
-                insertChannel.setString(2, message.getChannel().getName());
-                insertChannel.executeUpdate();
-
-                try (PreparedStatement insertMessage = wConn.prepareStatement("""
-                        INSERT INTO message (message_id, fk_channel, jump_link, fk_reply_to_message, timestamp, fk_user)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                        ON CONFLICT (message_id) DO NOTHING;
+                insertUser.setLong(1, message.getAuthor().getIdLong());
+                insertUser.setLong(2, message.getAuthor().getTimeCreated().toEpochSecond());
+                insertUser.setString(3, message.getAuthor().getName());
+                insertUser.executeUpdate();
+    
+                try (PreparedStatement insertChannel = wConn.prepareStatement("""
+                        INSERT INTO channel (discord_id, name)
+                        VALUES (?, ?)
+                        ON CONFLICT (discord_id) DO NOTHING;
                         """)) {
-                    insertMessage.setLong(1, message.getIdLong());
-                    insertMessage.setLong(2, message.getChannel().getIdLong());
-                    insertMessage.setString(3, message.getJumpUrl());
-        
-                    if (message.getReferencedMessage() != null) {
-                        insertMessage.setLong(4, message.getReferencedMessage().getIdLong());
-                    } else {
-                        insertMessage.setNull(4, Types.BIGINT);
-                    }
-                    
-                    insertMessage.setLong(5, message.getTimeCreated().toEpochSecond());
-                    insertMessage.setLong(6, message.getAuthor().getIdLong());
-                    insertMessage.executeUpdate();
-        
-                    if (!HifumiBot.getSelf().getPermissionManager().hasMessageLogBypass(message)) {
-                        try (PreparedStatement insertEvent = wConn.prepareStatement("""
-                                INSERT INTO message_event (fk_user, fk_message, timestamp, action, content)
-                                VALUES (?, ?, ?, ?, ?);
-                                """)) {
-                            insertEvent.setLong(1, message.getAuthor().getIdLong());
-                            insertEvent.setLong(2, message.getIdLong());
-                            insertEvent.setLong(3, message.getTimeCreated().toEpochSecond());
-                            insertEvent.setString(4, "send");
-                            insertEvent.setString(5, message.getContentRaw());
-                            insertEvent.executeUpdate();
-                            
-                            // Check if this message had any attachments. No need to continue if not.
-                            List<Attachment> attachments = message.getAttachments();
+                    insertChannel.setLong(1, message.getChannel().getIdLong());
+                    insertChannel.setString(2, message.getChannel().getName());
+                    insertChannel.executeUpdate();
+    
+                    try (PreparedStatement insertMessage = wConn.prepareStatement("""
+                            INSERT INTO message (message_id, fk_channel, jump_link, fk_reply_to_message, timestamp, fk_user)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                            ON CONFLICT (message_id) DO NOTHING;
+                            """)) {
+                        insertMessage.setLong(1, message.getIdLong());
+                        insertMessage.setLong(2, message.getChannel().getIdLong());
+                        insertMessage.setString(3, message.getJumpUrl());
             
-                            if (!attachments.isEmpty()) {
-                                try (PreparedStatement insertAttachments = wConn.prepareStatement("""
-                                        INSERT INTO message_attachment (discord_id, timestamp, fk_message, content_type, proxy_url, filename)
-                                        VALUES (?, ?, ?, ?, ?, ?)
-                                        ON CONFLICT (discord_id) DO NOTHING;
-                                        """)) {
-                                    for (Attachment attachment : attachments) {
-                                        insertAttachments.setLong(1, attachment.getIdLong());
-                                        insertAttachments.setLong(2, attachment.getTimeCreated().toEpochSecond());
-                                        insertAttachments.setLong(3, message.getIdLong());
-                                        insertAttachments.setString(4, attachment.getContentType());
-                                        insertAttachments.setString(5, attachment.getProxyUrl());
-                                        insertAttachments.setString(6, attachment.getFileName());
-                                        insertAttachments.addBatch();
+                        if (message.getReferencedMessage() != null) {
+                            insertMessage.setLong(4, message.getReferencedMessage().getIdLong());
+                        } else {
+                            insertMessage.setNull(4, Types.BIGINT);
+                        }
+                        
+                        insertMessage.setLong(5, message.getTimeCreated().toEpochSecond());
+                        insertMessage.setLong(6, message.getAuthor().getIdLong());
+                        insertMessage.executeUpdate();
+            
+                        if (!HifumiBot.getSelf().getPermissionManager().hasMessageLogBypass(message)) {
+                            try (PreparedStatement insertEvent = wConn.prepareStatement("""
+                                    INSERT INTO message_event (fk_user, fk_message, timestamp, action, content)
+                                    VALUES (?, ?, ?, ?, ?);
+                                    """)) {
+                                insertEvent.setLong(1, message.getAuthor().getIdLong());
+                                insertEvent.setLong(2, message.getIdLong());
+                                insertEvent.setLong(3, message.getTimeCreated().toEpochSecond());
+                                insertEvent.setString(4, "send");
+                                insertEvent.setString(5, message.getContentRaw());
+                                insertEvent.executeUpdate();
+                                
+                                // Check if this message had any attachments. No need to continue if not.
+                                List<Attachment> attachments = message.getAttachments();
+                
+                                if (!attachments.isEmpty()) {
+                                    try (PreparedStatement insertAttachments = wConn.prepareStatement("""
+                                            INSERT INTO message_attachment (discord_id, timestamp, fk_message, content_type, proxy_url, filename)
+                                            VALUES (?, ?, ?, ?, ?, ?)
+                                            ON CONFLICT (discord_id) DO NOTHING;
+                                            """)) {
+                                        for (Attachment attachment : attachments) {
+                                            insertAttachments.setLong(1, attachment.getIdLong());
+                                            insertAttachments.setLong(2, attachment.getTimeCreated().toEpochSecond());
+                                            insertAttachments.setLong(3, message.getIdLong());
+                                            insertAttachments.setString(4, attachment.getContentType());
+                                            insertAttachments.setString(5, attachment.getProxyUrl());
+                                            insertAttachments.setString(6, attachment.getFileName());
+                                            insertAttachments.addBatch();
+                                        }
+                                        
+                                        insertAttachments.executeBatch();
                                     }
-                                    
-                                    insertAttachments.executeBatch();
                                 }
                             }
                         }
                     }
                 }
+            } catch (SQLException e) {
+                 Messaging.logException("Database", "insertMessageReceivedEvent", e);
             }
-        } catch (SQLException e) {
-             Messaging.logException("Database", "insertMessageReceivedEvent", e);
-        }
+        });
     }
 
     /**
@@ -139,76 +143,17 @@ public class Database {
      * @param event
      */
     public static void insertMessageDeleteEvent(MessageDeleteEvent event) {
-        OffsetDateTime now = OffsetDateTime.now();
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-        
-        try (PreparedStatement getUser = wConn.prepareStatement("""
-                SELECT message_id, fk_user
-                FROM message
-                WHERE message_id = ?
-                LIMIT 1;
-                """)) {
-            getUser.setLong(1, event.getMessageIdLong());
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            OffsetDateTime now = OffsetDateTime.now();
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
             
-            long userId = 0;
-            
-            try (ResultSet res = getUser.executeQuery()) {
-                if (res.next()) {
-                    userId = res.getLong("fk_user");
-                }
-            }
-            
-            try (PreparedStatement insertChannel = wConn.prepareStatement("""
-                    INSERT INTO channel (discord_id, name)
-                    VALUES (?, ?)
-                    ON CONFLICT (discord_id) DO NOTHING;
-                    """)) {
-                insertChannel.setLong(1, event.getChannel().getIdLong());
-                insertChannel.setString(2, event.getChannel().getName());
-                insertChannel.executeUpdate();
-    
-                try (PreparedStatement insertMessage = wConn.prepareStatement("""
-                        INSERT INTO message (message_id, fk_channel)
-                        VALUES (?, ?)
-                        ON CONFLICT (message_id) DO NOTHING;
-                        """)) {
-                    insertMessage.setLong(1, event.getMessageIdLong());
-                    insertMessage.setLong(2, event.getChannel().getIdLong());
-                    insertMessage.executeUpdate();
-        
-                    try (PreparedStatement insertEvent = wConn.prepareStatement("""
-                            INSERT INTO message_event (fk_user, fk_message, timestamp, action)
-                            VALUES (?, ?, ?, ?);
-                            """)) {
-                        insertEvent.setLong(1, userId);
-                        insertEvent.setLong(2, event.getMessageIdLong());
-                        insertEvent.setLong(3, now.toEpochSecond());
-                        insertEvent.setString(4, "delete");
-                        insertEvent.executeUpdate();
-                    }
-                }
-            }
-        } catch (SQLException e) {
-             Messaging.logException("Database", "insertMessageDeleteEvent", e);
-        }
-    }
-
-    /**
-     * Store channel, message and event records
-     * @param event
-     */
-    public static void insertMessageBulkDeleteEvent(MessageBulkDeleteEvent event) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-        OffsetDateTime now = OffsetDateTime.now();
-        
-        for (String messageId : event.getMessageIds()) {
             try (PreparedStatement getUser = wConn.prepareStatement("""
                     SELECT message_id, fk_user
                     FROM message
                     WHERE message_id = ?
                     LIMIT 1;
                     """)) {
-                getUser.setLong(1, Long.valueOf(messageId));
+                getUser.setLong(1, event.getMessageIdLong());
                 
                 long userId = 0;
                 
@@ -226,22 +171,22 @@ public class Database {
                     insertChannel.setLong(1, event.getChannel().getIdLong());
                     insertChannel.setString(2, event.getChannel().getName());
                     insertChannel.executeUpdate();
-    
+        
                     try (PreparedStatement insertMessage = wConn.prepareStatement("""
                             INSERT INTO message (message_id, fk_channel)
                             VALUES (?, ?)
                             ON CONFLICT (message_id) DO NOTHING;
                             """)) {
-                        insertMessage.setLong(1, Long.valueOf(messageId));
+                        insertMessage.setLong(1, event.getMessageIdLong());
                         insertMessage.setLong(2, event.getChannel().getIdLong());
                         insertMessage.executeUpdate();
-        
+            
                         try (PreparedStatement insertEvent = wConn.prepareStatement("""
                                 INSERT INTO message_event (fk_user, fk_message, timestamp, action)
                                 VALUES (?, ?, ?, ?);
                                 """)) {
                             insertEvent.setLong(1, userId);
-                            insertEvent.setLong(2, Long.valueOf(messageId));
+                            insertEvent.setLong(2, event.getMessageIdLong());
                             insertEvent.setLong(3, now.toEpochSecond());
                             insertEvent.setString(4, "delete");
                             insertEvent.executeUpdate();
@@ -249,9 +194,72 @@ public class Database {
                     }
                 }
             } catch (SQLException e) {
-                Messaging.logException("Database", "insertMessageBulkDeleteEvent", e);
+                 Messaging.logException("Database", "insertMessageDeleteEvent", e);
             }
-        }
+        });
+    }
+
+    /**
+     * Store channel, message and event records
+     * @param event
+     */
+    public static void insertMessageBulkDeleteEvent(MessageBulkDeleteEvent event) {
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+            OffsetDateTime now = OffsetDateTime.now();
+            
+            for (String messageId : event.getMessageIds()) {
+                try (PreparedStatement getUser = wConn.prepareStatement("""
+                        SELECT message_id, fk_user
+                        FROM message
+                        WHERE message_id = ?
+                        LIMIT 1;
+                        """)) {
+                    getUser.setLong(1, Long.valueOf(messageId));
+                    
+                    long userId = 0;
+                    
+                    try (ResultSet res = getUser.executeQuery()) {
+                        if (res.next()) {
+                            userId = res.getLong("fk_user");
+                        }
+                    }
+                    
+                    try (PreparedStatement insertChannel = wConn.prepareStatement("""
+                            INSERT INTO channel (discord_id, name)
+                            VALUES (?, ?)
+                            ON CONFLICT (discord_id) DO NOTHING;
+                            """)) {
+                        insertChannel.setLong(1, event.getChannel().getIdLong());
+                        insertChannel.setString(2, event.getChannel().getName());
+                        insertChannel.executeUpdate();
+        
+                        try (PreparedStatement insertMessage = wConn.prepareStatement("""
+                                INSERT INTO message (message_id, fk_channel)
+                                VALUES (?, ?)
+                                ON CONFLICT (message_id) DO NOTHING;
+                                """)) {
+                            insertMessage.setLong(1, Long.valueOf(messageId));
+                            insertMessage.setLong(2, event.getChannel().getIdLong());
+                            insertMessage.executeUpdate();
+            
+                            try (PreparedStatement insertEvent = wConn.prepareStatement("""
+                                    INSERT INTO message_event (fk_user, fk_message, timestamp, action)
+                                    VALUES (?, ?, ?, ?);
+                                    """)) {
+                                insertEvent.setLong(1, userId);
+                                insertEvent.setLong(2, Long.valueOf(messageId));
+                                insertEvent.setLong(3, now.toEpochSecond());
+                                insertEvent.setString(4, "delete");
+                                insertEvent.executeUpdate();
+                            }
+                        }
+                    }
+                } catch (SQLException e) {
+                    Messaging.logException("Database", "insertMessageBulkDeleteEvent", e);
+                }
+            }
+        });
     }
 
     /**
@@ -259,76 +267,78 @@ public class Database {
      * @param event
      */
     public static void insertMessageUpdateEvent(MessageUpdateEvent event) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-
-        try (PreparedStatement insertUser = wConn.prepareStatement("""
-                INSERT INTO user (discord_id, created_datetime, username)
-                VALUES (?, ?, ?)
-                ON CONFLICT (discord_id) DO NOTHING;
-                """)) {
-            insertUser.setLong(1, event.getAuthor().getIdLong());
-            insertUser.setLong(2, event.getAuthor().getTimeCreated().toEpochSecond());
-            insertUser.setString(3, event.getAuthor().getName());
-            insertUser.executeUpdate();
-
-            try (PreparedStatement insertChannel = wConn.prepareStatement("""
-                    INSERT INTO channel (discord_id, name)
-                    VALUES (?, ?)
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+    
+            try (PreparedStatement insertUser = wConn.prepareStatement("""
+                    INSERT INTO user (discord_id, created_datetime, username)
+                    VALUES (?, ?, ?)
                     ON CONFLICT (discord_id) DO NOTHING;
                     """)) {
-                insertChannel.setLong(1, event.getChannel().getIdLong());
-                insertChannel.setString(2, event.getChannel().getName());
-                insertChannel.executeUpdate();
+                insertUser.setLong(1, event.getAuthor().getIdLong());
+                insertUser.setLong(2, event.getAuthor().getTimeCreated().toEpochSecond());
+                insertUser.setString(3, event.getAuthor().getName());
+                insertUser.executeUpdate();
     
-                try (PreparedStatement insertMessage = wConn.prepareStatement("""
-                        INSERT INTO message (message_id, fk_channel, fk_user)
-                        VALUES (?, ?, ?)
-                        ON CONFLICT (message_id) DO NOTHING;
+                try (PreparedStatement insertChannel = wConn.prepareStatement("""
+                        INSERT INTO channel (discord_id, name)
+                        VALUES (?, ?)
+                        ON CONFLICT (discord_id) DO NOTHING;
                         """)) {
-                    insertMessage.setLong(1, event.getMessageIdLong());
-                    insertMessage.setLong(2, event.getChannel().getIdLong());
-                    insertMessage.setLong(3, event.getAuthor().getIdLong());
-                    insertMessage.executeUpdate();
+                    insertChannel.setLong(1, event.getChannel().getIdLong());
+                    insertChannel.setString(2, event.getChannel().getName());
+                    insertChannel.executeUpdate();
         
-                    if (!HifumiBot.getSelf().getPermissionManager().hasMessageLogBypass(event.getMessage())) {
-                        List<Attachment> attachments = event.getMessage().getAttachments();
-        
-                        if (!attachments.isEmpty()) {
-                            try (PreparedStatement insertAttachment = wConn.prepareStatement("""
-                                    INSERT INTO message_attachment (discord_id, timestamp, fk_message, content_type, proxy_url)
-                                    VALUES (?, ?, ?, ?, ?)
-                                    ON CONFLICT (discord_id) DO NOTHING;
-                                    """)) {
-                                for (Attachment attachment : attachments) {
-                                    insertAttachment.setLong(1, attachment.getIdLong());
-                                    insertAttachment.setLong(2, attachment.getTimeCreated().toEpochSecond());
-                                    insertAttachment.setLong(3, event.getMessageIdLong());
-                                    insertAttachment.setString(4, attachment.getContentType());
-                                    insertAttachment.setString(5, attachment.getProxyUrl());
-                                    insertAttachment.addBatch();
+                    try (PreparedStatement insertMessage = wConn.prepareStatement("""
+                            INSERT INTO message (message_id, fk_channel, fk_user)
+                            VALUES (?, ?, ?)
+                            ON CONFLICT (message_id) DO NOTHING;
+                            """)) {
+                        insertMessage.setLong(1, event.getMessageIdLong());
+                        insertMessage.setLong(2, event.getChannel().getIdLong());
+                        insertMessage.setLong(3, event.getAuthor().getIdLong());
+                        insertMessage.executeUpdate();
+            
+                        if (!HifumiBot.getSelf().getPermissionManager().hasMessageLogBypass(event.getMessage())) {
+                            List<Attachment> attachments = event.getMessage().getAttachments();
+            
+                            if (!attachments.isEmpty()) {
+                                try (PreparedStatement insertAttachment = wConn.prepareStatement("""
+                                        INSERT INTO message_attachment (discord_id, timestamp, fk_message, content_type, proxy_url)
+                                        VALUES (?, ?, ?, ?, ?)
+                                        ON CONFLICT (discord_id) DO NOTHING;
+                                        """)) {
+                                    for (Attachment attachment : attachments) {
+                                        insertAttachment.setLong(1, attachment.getIdLong());
+                                        insertAttachment.setLong(2, attachment.getTimeCreated().toEpochSecond());
+                                        insertAttachment.setLong(3, event.getMessageIdLong());
+                                        insertAttachment.setString(4, attachment.getContentType());
+                                        insertAttachment.setString(5, attachment.getProxyUrl());
+                                        insertAttachment.addBatch();
+                                    }
+                                    
+                                    insertAttachment.executeBatch();
                                 }
-                                
-                                insertAttachment.executeBatch();
                             }
-                        }
-        
-                        try (PreparedStatement insertEvent = wConn.prepareStatement("""
-                                INSERT INTO message_event (fk_user, fk_message, timestamp, action, content)
-                                VALUES (?, ?, ?, ?, ?);
-                                """)) {
-                            insertEvent.setLong(1, event.getAuthor().getIdLong());
-                            insertEvent.setLong(2, event.getMessageIdLong());
-                            insertEvent.setLong(3, (event.getMessage().getTimeEdited() != null ? event.getMessage().getTimeEdited() : event.getMessage().getTimeCreated()).toEpochSecond());
-                            insertEvent.setString(4, "edit");
-                            insertEvent.setString(5, event.getMessage().getContentRaw());
-                            insertEvent.executeUpdate();
+            
+                            try (PreparedStatement insertEvent = wConn.prepareStatement("""
+                                    INSERT INTO message_event (fk_user, fk_message, timestamp, action, content)
+                                    VALUES (?, ?, ?, ?, ?);
+                                    """)) {
+                                insertEvent.setLong(1, event.getAuthor().getIdLong());
+                                insertEvent.setLong(2, event.getMessageIdLong());
+                                insertEvent.setLong(3, (event.getMessage().getTimeEdited() != null ? event.getMessage().getTimeEdited() : event.getMessage().getTimeCreated()).toEpochSecond());
+                                insertEvent.setString(4, "edit");
+                                insertEvent.setString(5, event.getMessage().getContentRaw());
+                                insertEvent.executeUpdate();
+                            }
                         }
                     }
                 }
+            } catch (SQLException e) {
+                 Messaging.logException("Database", "insertMessageUpdateEvent", e);
             }
-        } catch (SQLException e) {
-             Messaging.logException("Database", "insertMessageUpdateEvent", e);
-        }
+        });
     }
 
     public static MessageObject getOriginalMessage(String messageId) {
@@ -817,40 +827,51 @@ public class Database {
     }
 
     public static boolean insertWarezEvent(WarezEventObject warezEvent, User user) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-        
-        try (PreparedStatement insertUser = wConn.prepareStatement("""
-                INSERT INTO user (discord_id, created_datetime, username)
-                VALUES (?, ?, ?)
-                ON CONFLICT (discord_id) DO NOTHING;
-                """)) {
-            insertUser.setLong(1, warezEvent.getUserId());
-            insertUser.setLong(2, user.getTimeCreated().toEpochSecond());
-            insertUser.setString(3, user.getName());
-            insertUser.executeUpdate();
+        FutureTask<Boolean> task = new FutureTask<>(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
             
-            try (PreparedStatement insertWarez = wConn.prepareStatement("""
-                    INSERT INTO warez_event (timestamp, fk_user, action, fk_message)
-                    VALUES (?, ?, ?, ?);
+            try (PreparedStatement insertUser = wConn.prepareStatement("""
+                    INSERT INTO user (discord_id, created_datetime, username)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT (discord_id) DO NOTHING;
                     """)) {
-                insertWarez.setLong(1, warezEvent.getTimestamp());
-                insertWarez.setLong(2, warezEvent.getUserId());
-                insertWarez.setString(3, warezEvent.getAction().toString().toLowerCase());
-    
-                if (warezEvent.getMessageId().isPresent()) {
-                    insertWarez.setLong(4, warezEvent.getMessageId().get());
-                } else {
-                    insertWarez.setNull(4, Types.BIGINT);
-                }
+                insertUser.setLong(1, warezEvent.getUserId());
+                insertUser.setLong(2, user.getTimeCreated().toEpochSecond());
+                insertUser.setString(3, user.getName());
+                insertUser.executeUpdate();
                 
-                insertWarez.executeUpdate();
-                return true;
+                try (PreparedStatement insertWarez = wConn.prepareStatement("""
+                        INSERT INTO warez_event (timestamp, fk_user, action, fk_message)
+                        VALUES (?, ?, ?, ?);
+                        """)) {
+                    insertWarez.setLong(1, warezEvent.getTimestamp());
+                    insertWarez.setLong(2, warezEvent.getUserId());
+                    insertWarez.setString(3, warezEvent.getAction().toString().toLowerCase());
+        
+                    if (warezEvent.getMessageId().isPresent()) {
+                        insertWarez.setLong(4, warezEvent.getMessageId().get());
+                    } else {
+                        insertWarez.setNull(4, Types.BIGINT);
+                    }
+                    
+                    insertWarez.executeUpdate();
+                    return true;
+                }
+            } catch (SQLException e) {
+                Messaging.logException("Database", "insertWarezEvent", e);
             }
-        } catch (SQLException e) {
+    
+            return false;
+        });
+        
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(task);
+        
+        try {
+            return task.get();
+        } catch (InterruptedException | ExecutionException e) {
             Messaging.logException("Database", "insertWarezEvent", e);
+            return false;
         }
-
-        return false;
     }
 
     public static Optional<WarezEventObject> getLatestWarezAction(long userIdLong) {
@@ -1015,30 +1036,32 @@ public class Database {
     }
 
     public static void insertMemberJoinEvent(GuildMemberJoinEvent event) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-
-        try (PreparedStatement insertUser = wConn.prepareStatement("""
-                INSERT INTO user (discord_id, created_datetime, username)
-                VALUES (?, ?, ?)
-                ON CONFLICT (discord_id) DO NOTHING;
-                """)) {
-            insertUser.setLong(1, event.getMember().getIdLong());
-            insertUser.setLong(2, event.getMember().getTimeCreated().toEpochSecond());
-            insertUser.setString(3, event.getUser().getName());
-            insertUser.executeUpdate();
-
-            try (PreparedStatement insertEvent = wConn.prepareStatement("""
-                    INSERT INTO member_event (timestamp, fk_user, action)
-                    VALUES (?, ?, ?);
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+    
+            try (PreparedStatement insertUser = wConn.prepareStatement("""
+                    INSERT INTO user (discord_id, created_datetime, username)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT (discord_id) DO NOTHING;
                     """)) {
-                insertEvent.setLong(1, event.getGuild().retrieveMemberById(event.getMember().getId()).complete().getTimeJoined().toEpochSecond());
-                insertEvent.setLong(2, event.getMember().getIdLong());
-                insertEvent.setString(3, "join");
-                insertEvent.executeUpdate();
+                insertUser.setLong(1, event.getMember().getIdLong());
+                insertUser.setLong(2, event.getMember().getTimeCreated().toEpochSecond());
+                insertUser.setString(3, event.getUser().getName());
+                insertUser.executeUpdate();
+    
+                try (PreparedStatement insertEvent = wConn.prepareStatement("""
+                        INSERT INTO member_event (timestamp, fk_user, action)
+                        VALUES (?, ?, ?);
+                        """)) {
+                    insertEvent.setLong(1, event.getGuild().retrieveMemberById(event.getMember().getId()).complete().getTimeJoined().toEpochSecond());
+                    insertEvent.setLong(2, event.getMember().getIdLong());
+                    insertEvent.setString(3, "join");
+                    insertEvent.executeUpdate();
+                }
+            } catch (SQLException e) {
+                Messaging.logException("Database", "insertMemberJoinEvent", e);
             }
-        } catch (SQLException e) {
-            Messaging.logException("Database", "insertMemberJoinEvent", e);
-        }
+        });
     }
 
     public static ArrayList<MemberEventObject> getRecentMemberEvents(long userId) {
@@ -1164,56 +1187,60 @@ public class Database {
     }
 
     public static void insertMemberRemoveEvent(GuildMemberRemoveEvent event, OffsetDateTime time) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-
-        try (PreparedStatement insertUser = wConn.prepareStatement("""
-                INSERT INTO user (discord_id, created_datetime, username)
-                VALUES (?, ?, ?)
-                ON CONFLICT (discord_id) DO NOTHING;
-                """)) {
-            insertUser.setLong(1, event.getUser().getIdLong());
-            insertUser.setLong(2, event.getUser().getTimeCreated().toEpochSecond());
-            insertUser.setString(3, event.getUser().getName());
-            insertUser.executeUpdate();
-
-            try (PreparedStatement insertEvent = wConn.prepareStatement("""
-                    INSERT INTO member_event (timestamp, fk_user, action)
-                    VALUES (?, ?, ?);
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+    
+            try (PreparedStatement insertUser = wConn.prepareStatement("""
+                    INSERT INTO user (discord_id, created_datetime, username)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT (discord_id) DO NOTHING;
                     """)) {
-                insertEvent.setLong(1, time.toEpochSecond());
-                insertEvent.setLong(2, event.getUser().getIdLong());
-                insertEvent.setString(3, "leave");
-                insertEvent.executeUpdate();
+                insertUser.setLong(1, event.getUser().getIdLong());
+                insertUser.setLong(2, event.getUser().getTimeCreated().toEpochSecond());
+                insertUser.setString(3, event.getUser().getName());
+                insertUser.executeUpdate();
+    
+                try (PreparedStatement insertEvent = wConn.prepareStatement("""
+                        INSERT INTO member_event (timestamp, fk_user, action)
+                        VALUES (?, ?, ?);
+                        """)) {
+                    insertEvent.setLong(1, time.toEpochSecond());
+                    insertEvent.setLong(2, event.getUser().getIdLong());
+                    insertEvent.setString(3, "leave");
+                    insertEvent.executeUpdate();
+                }
+            } catch (SQLException e) {
+                Messaging.logException("Database", "insertMemberRemoveEvent", e);
             }
-        } catch (SQLException e) {
-            Messaging.logException("Database", "insertMemberRemoveEvent", e);
-        }
+        });
     }
 
     public static void insertMemberBanEvent(GuildBanEvent event, OffsetDateTime time) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-
-        try (PreparedStatement insertUser = wConn.prepareStatement("""
-                INSERT INTO user (discord_id, created_datetime, username)
-                VALUES (?, ?, ?) ON CONFLICT (discord_id) DO NOTHING;
-                """)) {
-            insertUser.setLong(1, event.getUser().getIdLong());
-            insertUser.setLong(2, event.getUser().getTimeCreated().toEpochSecond());
-            insertUser.setString(3, event.getUser().getName());
-            insertUser.executeUpdate();
-
-            try (PreparedStatement insertEvent = wConn.prepareStatement("""
-                    INSERT INTO member_event (timestamp, fk_user, action)
-                    VALUES (?, ?, ?);
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+    
+            try (PreparedStatement insertUser = wConn.prepareStatement("""
+                    INSERT INTO user (discord_id, created_datetime, username)
+                    VALUES (?, ?, ?) ON CONFLICT (discord_id) DO NOTHING;
                     """)) {
-                insertEvent.setLong(1, time.toEpochSecond());
-                insertEvent.setLong(2, event.getUser().getIdLong());
-                insertEvent.setString(3, "ban");
-                insertEvent.executeUpdate();
+                insertUser.setLong(1, event.getUser().getIdLong());
+                insertUser.setLong(2, event.getUser().getTimeCreated().toEpochSecond());
+                insertUser.setString(3, event.getUser().getName());
+                insertUser.executeUpdate();
+    
+                try (PreparedStatement insertEvent = wConn.prepareStatement("""
+                        INSERT INTO member_event (timestamp, fk_user, action)
+                        VALUES (?, ?, ?);
+                        """)) {
+                    insertEvent.setLong(1, time.toEpochSecond());
+                    insertEvent.setLong(2, event.getUser().getIdLong());
+                    insertEvent.setString(3, "ban");
+                    insertEvent.executeUpdate();
+                }
+            } catch (SQLException e) {
+                 Messaging.logException("Database", "insertMemberBanEvent", e);
             }
-        } catch (SQLException e) {
-             Messaging.logException("Database", "insertMemberBanEvent", e);
-        }
+        });
     }
 
     /**
@@ -1221,65 +1248,67 @@ public class Database {
      * @param automodEvent
      */
     public static void insertAutoModEvent(AutoModExecutionEvent event, User user, OffsetDateTime time) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-
-        try (PreparedStatement insertUser = wConn.prepareStatement("""
-                INSERT INTO user (discord_id, created_datetime, username)
-                VALUES (?, ?, ?)
-                ON CONFLICT (discord_id) DO NOTHING;
-                """)) {
-            insertUser.setLong(1, user.getIdLong());
-            insertUser.setLong(2, user.getTimeCreated().toEpochSecond());
-            insertUser.setString(3, user.getName());
-            insertUser.executeUpdate();
-
-            try (PreparedStatement insertMessage = wConn.prepareStatement("""
-                    INSERT INTO message (message_id, fk_channel, fk_user)
-                    VALUES (?, ?, ?)
-                    ON CONFLICT (message_id) DO NOTHING;
-                    """)) {
-                insertMessage.setLong(1, event.getMessageIdLong());
-                insertMessage.setLong(2, event.getChannel().getIdLong());
-                insertMessage.setLong(3, user.getIdLong());
-                insertMessage.executeUpdate();
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
     
-                try (PreparedStatement insertAutoModEvent = wConn.prepareStatement("""
-                        INSERT INTO automod_event (fk_user, fk_message, fk_channel, alert_message_id, rule_id, timestamp, trigger, content, matched_content, matched_keyword, response_type)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            try (PreparedStatement insertUser = wConn.prepareStatement("""
+                    INSERT INTO user (discord_id, created_datetime, username)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT (discord_id) DO NOTHING;
+                    """)) {
+                insertUser.setLong(1, user.getIdLong());
+                insertUser.setLong(2, user.getTimeCreated().toEpochSecond());
+                insertUser.setString(3, user.getName());
+                insertUser.executeUpdate();
+    
+                try (PreparedStatement insertMessage = wConn.prepareStatement("""
+                        INSERT INTO message (message_id, fk_channel, fk_user)
+                        VALUES (?, ?, ?)
+                        ON CONFLICT (message_id) DO NOTHING;
                         """)) {
-                    insertAutoModEvent.setLong(1, event.getUserIdLong());
-                    
-                    if (event.getMessageIdLong() != 0) {
-                        insertAutoModEvent.setLong(2, event.getMessageIdLong());
-                    } else {
-                        insertAutoModEvent.setNull(2, Types.BIGINT);
-                    }
-                    
-                    if (event.getChannel() != null) {
-                        insertAutoModEvent.setLong(3, event.getChannel().getIdLong());
-                    } else {
-                        insertAutoModEvent.setNull(3, Types.BIGINT);
-                    }
-                    
-                    if (event.getAlertMessageIdLong() != 0) {
-                        insertAutoModEvent.setLong(4, event.getAlertMessageIdLong());
-                    } else {
-                        insertAutoModEvent.setNull(4, Types.BIGINT);
-                    }
+                    insertMessage.setLong(1, event.getMessageIdLong());
+                    insertMessage.setLong(2, event.getChannel().getIdLong());
+                    insertMessage.setLong(3, user.getIdLong());
+                    insertMessage.executeUpdate();
         
-                    insertAutoModEvent.setLong(5, event.getRuleIdLong());
-                    insertAutoModEvent.setLong(6, time.toEpochSecond());
-                    insertAutoModEvent.setString(7, event.getTriggerType().toString());
-                    insertAutoModEvent.setString(8, event.getContent());
-                    insertAutoModEvent.setString(9, event.getMatchedContent());
-                    insertAutoModEvent.setString(10, event.getMatchedKeyword());
-                    insertAutoModEvent.setString(11, event.getResponse().getType().toString());
-                    insertAutoModEvent.executeUpdate();
+                    try (PreparedStatement insertAutoModEvent = wConn.prepareStatement("""
+                            INSERT INTO automod_event (fk_user, fk_message, fk_channel, alert_message_id, rule_id, timestamp, trigger, content, matched_content, matched_keyword, response_type)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                            """)) {
+                        insertAutoModEvent.setLong(1, event.getUserIdLong());
+                        
+                        if (event.getMessageIdLong() != 0) {
+                            insertAutoModEvent.setLong(2, event.getMessageIdLong());
+                        } else {
+                            insertAutoModEvent.setNull(2, Types.BIGINT);
+                        }
+                        
+                        if (event.getChannel() != null) {
+                            insertAutoModEvent.setLong(3, event.getChannel().getIdLong());
+                        } else {
+                            insertAutoModEvent.setNull(3, Types.BIGINT);
+                        }
+                        
+                        if (event.getAlertMessageIdLong() != 0) {
+                            insertAutoModEvent.setLong(4, event.getAlertMessageIdLong());
+                        } else {
+                            insertAutoModEvent.setNull(4, Types.BIGINT);
+                        }
+            
+                        insertAutoModEvent.setLong(5, event.getRuleIdLong());
+                        insertAutoModEvent.setLong(6, time.toEpochSecond());
+                        insertAutoModEvent.setString(7, event.getTriggerType().toString());
+                        insertAutoModEvent.setString(8, event.getContent());
+                        insertAutoModEvent.setString(9, event.getMatchedContent());
+                        insertAutoModEvent.setString(10, event.getMatchedKeyword());
+                        insertAutoModEvent.setString(11, event.getResponse().getType().toString());
+                        insertAutoModEvent.executeUpdate();
+                    }
                 }
+            } catch (SQLException e) {
+                 Messaging.logException("Database", "insertAutoModEvent", e);
             }
-        } catch (SQLException e) {
-             Messaging.logException("Database", "insertAutoModEvent", e);
-        }
+        });
     }
 
     public static ArrayList<AutoModEventObject> getAutoModEventsSinceTime(long userIdLong, OffsetDateTime time) {
@@ -1443,19 +1472,21 @@ public class Database {
     }
 
     public static void insertCounter(String type, long timestamp, long value) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-
-        try (PreparedStatement insertCounter = wConn.prepareStatement("""
-                    INSERT INTO counter (type, timestamp, value)
-                    VALUES (?, ?, ?);
-                    """)) {
-            insertCounter.setString(1, type);
-            insertCounter.setLong(2, timestamp);
-            insertCounter.setLong(3, value);
-            insertCounter.executeUpdate();
-        } catch (SQLException e) {
-             Messaging.logException("Database", "insertCounter", e);
-        }
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+    
+            try (PreparedStatement insertCounter = wConn.prepareStatement("""
+                        INSERT INTO counter (type, timestamp, value)
+                        VALUES (?, ?, ?);
+                        """)) {
+                insertCounter.setString(1, type);
+                insertCounter.setLong(2, timestamp);
+                insertCounter.setLong(3, value);
+                insertCounter.executeUpdate();
+            } catch (SQLException e) {
+                 Messaging.logException("Database", "insertCounter", e);
+            }
+        });
     }
 
     public static CounterObject getLatestCounter(String type) {
@@ -1489,77 +1520,79 @@ public class Database {
     }
 
     public static void insertCommandEvent(long commandIdLong, String type, String name, String group, String sub, long eventIdLong, User user, long channelIdLong, long timestamp, boolean ninja, List<OptionMapping> options) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-
-        try (PreparedStatement insertUser = wConn.prepareStatement("""
-                INSERT INTO user (discord_id, created_datetime, username)
-                VALUES (?, ?, ?)
-                ON CONFLICT (discord_id) DO NOTHING;
-                """)) {
-            insertUser.setLong(1, user.getIdLong());
-            insertUser.setLong(2, user.getTimeCreated().toEpochSecond());
-            insertUser.setString(3, user.getName());
-            insertUser.executeUpdate();
-
-            try (PreparedStatement insertCommand = wConn.prepareStatement("""
-                    INSERT INTO command (discord_id, type, name, subgroup, subcmd)
-                    VALUES (?, ?, ?, ?, ?)
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+    
+            try (PreparedStatement insertUser = wConn.prepareStatement("""
+                    INSERT INTO user (discord_id, created_datetime, username)
+                    VALUES (?, ?, ?)
                     ON CONFLICT (discord_id) DO NOTHING;
                     """)) {
-                insertCommand.setLong(1, commandIdLong);
-                insertCommand.setString(2, type);
-                insertCommand.setString(3, name);
-                insertCommand.setString(4, group);
-                insertCommand.setString(5, sub);
-                insertCommand.executeUpdate();
+                insertUser.setLong(1, user.getIdLong());
+                insertUser.setLong(2, user.getTimeCreated().toEpochSecond());
+                insertUser.setString(3, user.getName());
+                insertUser.executeUpdate();
     
-                try (PreparedStatement insertCommandEvent = wConn.prepareStatement("""
-                        INSERT INTO command_event (discord_id, command_fk, user_fk, channel_fk, timestamp, ninja)
-                        VALUES (?, ?, ?, ?, ?, ?);
+                try (PreparedStatement insertCommand = wConn.prepareStatement("""
+                        INSERT INTO command (discord_id, type, name, subgroup, subcmd)
+                        VALUES (?, ?, ?, ?, ?)
+                        ON CONFLICT (discord_id) DO NOTHING;
                         """)) {
-                    insertCommandEvent.setLong(1, eventIdLong);
-                    insertCommandEvent.setLong(2, commandIdLong);
-                    insertCommandEvent.setLong(3, user.getIdLong());
-                    insertCommandEvent.setLong(4, channelIdLong);
-                    insertCommandEvent.setLong(5, timestamp);
-                    insertCommandEvent.setBoolean(6, ninja);
-                    insertCommandEvent.executeUpdate();
+                    insertCommand.setLong(1, commandIdLong);
+                    insertCommand.setString(2, type);
+                    insertCommand.setString(3, name);
+                    insertCommand.setString(4, group);
+                    insertCommand.setString(5, sub);
+                    insertCommand.executeUpdate();
         
-                    if (options.isEmpty()) {
-                        return;
-                    }
-        
-                    StringBuilder sb = new StringBuilder("""
-                            INSERT INTO command_event_option (command_event_fk, name, value_str)
-                            VALUES
-                    """);
-        
-                    for (int i = 0; i < options.size(); i++) {
-                        sb.append(" (?, ?, ?)");
-        
-                        if (i < options.size() - 1) {
-                            sb.append(",");
-                        }
-                    }
-        
-                    sb.append(";");
-        
-                    try (PreparedStatement insertOptions = wConn.prepareStatement(sb.toString())) {
-                        int counter = 1;
+                    try (PreparedStatement insertCommandEvent = wConn.prepareStatement("""
+                            INSERT INTO command_event (discord_id, command_fk, user_fk, channel_fk, timestamp, ninja)
+                            VALUES (?, ?, ?, ?, ?, ?);
+                            """)) {
+                        insertCommandEvent.setLong(1, eventIdLong);
+                        insertCommandEvent.setLong(2, commandIdLong);
+                        insertCommandEvent.setLong(3, user.getIdLong());
+                        insertCommandEvent.setLong(4, channelIdLong);
+                        insertCommandEvent.setLong(5, timestamp);
+                        insertCommandEvent.setBoolean(6, ninja);
+                        insertCommandEvent.executeUpdate();
             
-                        for (OptionMapping opt : options) {
-                            insertOptions.setLong(counter++, commandIdLong);
-                            insertOptions.setString(counter++, opt.getName());
-                            insertOptions.setString(counter++, opt.getAsString());
+                        if (options.isEmpty()) {
+                            return;
                         }
-                        
-                        insertOptions.executeUpdate();
+            
+                        StringBuilder sb = new StringBuilder("""
+                                INSERT INTO command_event_option (command_event_fk, name, value_str)
+                                VALUES
+                        """);
+            
+                        for (int i = 0; i < options.size(); i++) {
+                            sb.append(" (?, ?, ?)");
+            
+                            if (i < options.size() - 1) {
+                                sb.append(",");
+                            }
+                        }
+            
+                        sb.append(";");
+            
+                        try (PreparedStatement insertOptions = wConn.prepareStatement(sb.toString())) {
+                            int counter = 1;
+                
+                            for (OptionMapping opt : options) {
+                                insertOptions.setLong(counter++, commandIdLong);
+                                insertOptions.setString(counter++, opt.getName());
+                                insertOptions.setString(counter++, opt.getAsString());
+                            }
+                            
+                            insertOptions.executeUpdate();
+                        }
                     }
                 }
+            } catch (SQLException e) {
+                 Messaging.logException("Database", "insertCommandEvent", e);
             }
-        } catch (SQLException e) {
-             Messaging.logException("Database", "insertCommandEvent", e);
-        }
+        });
     }
 
     /**
@@ -1645,73 +1678,79 @@ public class Database {
     }
 
     public static void insertUsernameChangeEvent(UserUpdateNameEvent event) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-
-        try (PreparedStatement insertUser = wConn.prepareStatement("""
-                INSERT INTO user (discord_id, created_datetime, username)
-                VALUES (?, ?, ?)
-                ON CONFLICT (discord_id) DO NOTHING;
-                """)) {
-            insertUser.setLong(1, event.getUser().getIdLong());
-            insertUser.setLong(2, event.getUser().getTimeCreated().toEpochSecond());
-            insertUser.setString(3, event.getUser().getName());
-            insertUser.executeUpdate();
-
-            try (PreparedStatement insertUsernameEvent = wConn.prepareStatement("""
-                    INSERT INTO user_username_event (fk_user, old_username, new_username)
-                    VALUES (?, ?, ?);
-                    """)) {
-                insertUsernameEvent.setLong(1, event.getUser().getIdLong());
-                insertUsernameEvent.setString(2, event.getOldName());
-                insertUsernameEvent.setString(3, event.getNewName());
-                insertUsernameEvent.executeUpdate();
-            }
-        } catch (SQLException e) {
-             Messaging.logException("Database", "insertUsernameChangeEvent", e);
-        }
-    }
-
-    public static void insertDisplayNameChangeEvent(UserUpdateGlobalNameEvent event) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-
-        try (PreparedStatement insertUser = wConn.prepareStatement("""
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+    
+            try (PreparedStatement insertUser = wConn.prepareStatement("""
                     INSERT INTO user (discord_id, created_datetime, username)
                     VALUES (?, ?, ?)
                     ON CONFLICT (discord_id) DO NOTHING;
                     """)) {
-            insertUser.setLong(1, event.getUser().getIdLong());
-            insertUser.setLong(2, event.getUser().getTimeCreated().toEpochSecond());
-            insertUser.setString(3, event.getUser().getName());
-            insertUser.executeUpdate();
-
-            try (PreparedStatement insertDisplayNameEvent = wConn.prepareStatement("""
-                    INSERT INTO user_displayname_event (fk_user, old_displayname, new_displayname)
-                    VALUES (?, ?, ?);
-                    """)) {
-                insertDisplayNameEvent.setLong(1, event.getUser().getIdLong());
-                insertDisplayNameEvent.setString(2, event.getOldGlobalName());
-                insertDisplayNameEvent.setString(3, event.getNewGlobalName());
-                insertDisplayNameEvent.executeUpdate();
+                insertUser.setLong(1, event.getUser().getIdLong());
+                insertUser.setLong(2, event.getUser().getTimeCreated().toEpochSecond());
+                insertUser.setString(3, event.getUser().getName());
+                insertUser.executeUpdate();
+    
+                try (PreparedStatement insertUsernameEvent = wConn.prepareStatement("""
+                        INSERT INTO user_username_event (fk_user, old_username, new_username)
+                        VALUES (?, ?, ?);
+                        """)) {
+                    insertUsernameEvent.setLong(1, event.getUser().getIdLong());
+                    insertUsernameEvent.setString(2, event.getOldName());
+                    insertUsernameEvent.setString(3, event.getNewName());
+                    insertUsernameEvent.executeUpdate();
+                }
+            } catch (SQLException e) {
+                 Messaging.logException("Database", "insertUsernameChangeEvent", e);
             }
-        } catch (SQLException e) {
-             Messaging.logException("Database", "insertDisplayNameChangeEvent", e);
-        }
+        });
+    }
+
+    public static void insertDisplayNameChangeEvent(UserUpdateGlobalNameEvent event) {
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+    
+            try (PreparedStatement insertUser = wConn.prepareStatement("""
+                        INSERT INTO user (discord_id, created_datetime, username)
+                        VALUES (?, ?, ?)
+                        ON CONFLICT (discord_id) DO NOTHING;
+                        """)) {
+                insertUser.setLong(1, event.getUser().getIdLong());
+                insertUser.setLong(2, event.getUser().getTimeCreated().toEpochSecond());
+                insertUser.setString(3, event.getUser().getName());
+                insertUser.executeUpdate();
+    
+                try (PreparedStatement insertDisplayNameEvent = wConn.prepareStatement("""
+                        INSERT INTO user_displayname_event (fk_user, old_displayname, new_displayname)
+                        VALUES (?, ?, ?);
+                        """)) {
+                    insertDisplayNameEvent.setLong(1, event.getUser().getIdLong());
+                    insertDisplayNameEvent.setString(2, event.getOldGlobalName());
+                    insertDisplayNameEvent.setString(3, event.getNewGlobalName());
+                    insertDisplayNameEvent.executeUpdate();
+                }
+            } catch (SQLException e) {
+                 Messaging.logException("Database", "insertDisplayNameChangeEvent", e);
+            }
+        });
     }
 
     public static void insertInteractionEvent(long eventId, long timestamp, long userId) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-
-        try (PreparedStatement insertInteractionEvent = wConn.prepareStatement("""
-                    INSERT INTO interaction_event (id, timestamp, user_fk)
-                    VALUES (?, ?, ?);
-                    """)) {
-            insertInteractionEvent.setLong(1, eventId);
-            insertInteractionEvent.setLong(2, timestamp);
-            insertInteractionEvent.setLong(3, userId);
-            insertInteractionEvent.executeUpdate();
-        } catch (SQLException e) {
-            Messaging.logException("Database", "insertInteractionEvent", e);
-        }   
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+    
+            try (PreparedStatement insertInteractionEvent = wConn.prepareStatement("""
+                        INSERT INTO interaction_event (id, timestamp, user_fk)
+                        VALUES (?, ?, ?);
+                        """)) {
+                insertInteractionEvent.setLong(1, eventId);
+                insertInteractionEvent.setLong(2, timestamp);
+                insertInteractionEvent.setLong(3, userId);
+                insertInteractionEvent.executeUpdate();
+            } catch (SQLException e) {
+                Messaging.logException("Database", "insertInteractionEvent", e);
+            }
+        });
     }
 
     public static Optional<InteractionEventObject> getInteractionEvent(long eventId, long userId) {
@@ -1746,20 +1785,22 @@ public class Database {
     }
     
     public static void insertScamHash(String sha256, String description) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-        
-        try (PreparedStatement insertScamHash = wConn.prepareStatement("""
-                INSERT INTO scam_hash (sha256, timestamp, description, active)
-                VALUES (?, ?, ?, true)
-                ON CONFLICT (sha256) DO NOTHING;
-                """)) {
-            insertScamHash.setString(1, sha256);
-            insertScamHash.setLong(2, OffsetDateTime.now().toEpochSecond());
-            insertScamHash.setString(3, description);
-            insertScamHash.executeUpdate();
-        } catch (SQLException e) {
-            Messaging.logException("Database", "insertScamHash", e);
-        }
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+            
+            try (PreparedStatement insertScamHash = wConn.prepareStatement("""
+                    INSERT INTO scam_hash (sha256, timestamp, description, active)
+                    VALUES (?, ?, ?, true)
+                    ON CONFLICT (sha256) DO NOTHING;
+                    """)) {
+                insertScamHash.setString(1, sha256);
+                insertScamHash.setLong(2, OffsetDateTime.now().toEpochSecond());
+                insertScamHash.setString(3, description);
+                insertScamHash.executeUpdate();
+            } catch (SQLException e) {
+                Messaging.logException("Database", "insertScamHash", e);
+            }
+        });
     }
     
     public static void updateScamHash(String sha256, boolean state) {
@@ -1853,50 +1894,56 @@ public class Database {
     }
     
     public static void insertScamHashMatch(long timestamp, String sha256, long messageId) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-        
-        try (PreparedStatement insertScamHashMatch = wConn.prepareStatement("""
-                INSERT INTO scam_hash_match (timestamp, fk_scam_hash, fk_message)
-                VALUES (?, ?, ?);
-                """)) {
-            insertScamHashMatch.setLong(1, OffsetDateTime.now().toEpochSecond());
-            insertScamHashMatch.setString(2, sha256);
-            insertScamHashMatch.setLong(3, messageId);
-            insertScamHashMatch.executeUpdate();
-        } catch (SQLException e) {
-            Messaging.logException("Database", "insertScamHashMatch", e);
-        }
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+            
+            try (PreparedStatement insertScamHashMatch = wConn.prepareStatement("""
+                    INSERT INTO scam_hash_match (timestamp, fk_scam_hash, fk_message)
+                    VALUES (?, ?, ?);
+                    """)) {
+                insertScamHashMatch.setLong(1, OffsetDateTime.now().toEpochSecond());
+                insertScamHashMatch.setString(2, sha256);
+                insertScamHashMatch.setLong(3, messageId);
+                insertScamHashMatch.executeUpdate();
+            } catch (SQLException e) {
+                Messaging.logException("Database", "insertScamHashMatch", e);
+            }
+        });
     }
     
     public static void insertHoneypotEvent(long timestamp, long userId, long messageId) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-        
-        try (PreparedStatement insertHoneypotEvent = wConn.prepareStatement("""
-                INSERT INTO honeypot_event (timestamp, fk_user, fk_message)
-                VALUES (?, ?, ?);
-                """)) {
-            insertHoneypotEvent.setLong(1, timestamp);
-            insertHoneypotEvent.setLong(2, userId);
-            insertHoneypotEvent.setLong(3, messageId);
-            insertHoneypotEvent.executeUpdate();
-        } catch (SQLException e) {
-            Messaging.logException("Database", "insertHoneypotEvent", e);
-        }
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+            
+            try (PreparedStatement insertHoneypotEvent = wConn.prepareStatement("""
+                    INSERT INTO honeypot_event (timestamp, fk_user, fk_message)
+                    VALUES (?, ?, ?);
+                    """)) {
+                insertHoneypotEvent.setLong(1, timestamp);
+                insertHoneypotEvent.setLong(2, userId);
+                insertHoneypotEvent.setLong(3, messageId);
+                insertHoneypotEvent.executeUpdate();
+            } catch (SQLException e) {
+                Messaging.logException("Database", "insertHoneypotEvent", e);
+            }
+        });
     }
     
     public static void insertAntiBotEvent(long timestamp, long userId) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-        
-        try (PreparedStatement insertAntiBotEvent = wConn.prepareStatement("""
-                INSERT INTO antibot_event (timestamp, fk_user)
-                VALUES (?, ?);
-                """)) {
-            insertAntiBotEvent.setLong(1, timestamp);
-            insertAntiBotEvent.setLong(2, userId);
-            insertAntiBotEvent.executeUpdate();
-        } catch (SQLException e) {
-            Messaging.logException("Database", "insertAntiBotEvent", e);
-        }
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
+            
+            try (PreparedStatement insertAntiBotEvent = wConn.prepareStatement("""
+                    INSERT INTO antibot_event (timestamp, fk_user)
+                    VALUES (?, ?);
+                    """)) {
+                insertAntiBotEvent.setLong(1, timestamp);
+                insertAntiBotEvent.setLong(2, userId);
+                insertAntiBotEvent.executeUpdate();
+            } catch (SQLException e) {
+                Messaging.logException("Database", "insertAntiBotEvent", e);
+            }
+        });
     }
     
     public static ArrayList<SpamkickChartData> getSpamkickCommandEventsBetween(long startTimestamp, long endTimestamp, String timeUnit) {
@@ -2063,26 +2110,28 @@ public class Database {
     }
     
     public static void insertSpamkickEvent(long timestamp, long userId, String type, Optional<Long> messageIdOpt) {
-        Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
-        
-        try (PreparedStatement insertSpamkick = wConn.prepareStatement("""
-                INSERT INTO spamkick_event (timestamp, fk_user, type, fk_message)
-                VALUES (?, ?, ?, ?);
-                """)) {
-            insertSpamkick.setLong(1, timestamp);
-            insertSpamkick.setLong(2, userId);
-            insertSpamkick.setString(3, type);
+        HifumiBot.getSelf().getScheduler().addToDatabaseWriteFIFO(() -> {
+            Connection wConn = HifumiBot.getSelf().getSQLite().getWriteConnection();
             
-            if (messageIdOpt.isPresent()) {
-                insertSpamkick.setLong(4, messageIdOpt.get());
-            } else {
-                insertSpamkick.setNull(4, Types.BIGINT);
+            try (PreparedStatement insertSpamkick = wConn.prepareStatement("""
+                    INSERT INTO spamkick_event (timestamp, fk_user, type, fk_message)
+                    VALUES (?, ?, ?, ?);
+                    """)) {
+                insertSpamkick.setLong(1, timestamp);
+                insertSpamkick.setLong(2, userId);
+                insertSpamkick.setString(3, type);
+                
+                if (messageIdOpt.isPresent()) {
+                    insertSpamkick.setLong(4, messageIdOpt.get());
+                } else {
+                    insertSpamkick.setNull(4, Types.BIGINT);
+                }
+                
+                insertSpamkick.executeUpdate();
+            } catch (SQLException e) {
+                Messaging.logException("Database", "insertScamHash", e);
             }
-            
-            insertSpamkick.executeUpdate();
-        } catch (SQLException e) {
-            Messaging.logException("Database", "insertScamHash", e);
-        }
+        });
     }
     
     public static ArrayList<SpamkickChartData> getSpamkickEventsBetween(long startTimestamp, long endTimestamp, String timeUnit) {

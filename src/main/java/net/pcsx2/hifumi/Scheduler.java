@@ -10,7 +10,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import net.pcsx2.hifumi.filter.MessageFilteringRunnable;
 import net.pcsx2.hifumi.util.Messaging;
@@ -21,12 +20,10 @@ public class Scheduler {
     private ExecutorService messageEventFIFO;
     private ExecutorService messageFilterFIFO;
     private ExecutorService databaseWriteQueue;
-    private ReentrantReadWriteLock databaseLock;
     private HashMap<String, Runnable> runnables = new HashMap<String, Runnable>();
     private HashMap<String, ScheduledFuture<?>> statuses = new HashMap<String, ScheduledFuture<?>>();
 
     public Scheduler() {
-        this.databaseLock = new ReentrantReadWriteLock(true);
         this.threadPool = Executors.newScheduledThreadPool(6, new SchedulerThreadFactory("pool"));
         this.messageEventFIFO = Executors.newSingleThreadExecutor(new SchedulerThreadFactory("msg-evt-fifo"));
         this.messageFilterFIFO = Executors.newSingleThreadExecutor(new SchedulerThreadFactory("msg-flt-fifo"));
@@ -34,27 +31,11 @@ public class Scheduler {
     }
 
     public void addToMessageEventFIFO(Runnable runnable) {
-        this.messageEventFIFO.execute(() -> {
-            databaseLock.readLock().lock();
-            
-            try {
-                runnable.run();
-            } finally {
-                databaseLock.readLock().unlock();
-            }
-        });
+        this.messageEventFIFO.execute(runnable);
     }
     
     public void addToMessageFilterFIFO(MessageFilteringRunnable runnable) {
-        this.messageFilterFIFO.execute(() -> {
-            databaseLock.writeLock().lock();
-            
-            try {
-                runnable.run();
-            } finally {
-                databaseLock.writeLock().unlock();
-            }
-        });
+        this.messageFilterFIFO.execute(runnable);
     }
     
     public void addToDatabaseWriteFIFO(Runnable runnable) {

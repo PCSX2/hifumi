@@ -20,7 +20,7 @@ public class SQLite {
     public SQLite(String dataDirectory) {
         try {
             SQLiteConfig config = new SQLiteConfig();
-            config.setBusyTimeout(250);
+            config.setBusyTimeout(500);
             
             // NOTE: this shouldn't be needed for modern versions of java, it should just dynamically look
             // at the classpath for you, but leaving it here incase im wrong

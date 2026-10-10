@@ -7,6 +7,8 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+import org.sqlite.SQLiteConfig;
+
 import net.pcsx2.hifumi.util.Log;
 import net.pcsx2.hifumi.util.Messaging;
 
@@ -17,17 +19,20 @@ public class SQLite {
 
     public SQLite(String dataDirectory) {
         try {
+            SQLiteConfig config = new SQLiteConfig();
+            config.setBusyTimeout(250);
+            
             // NOTE: this shouldn't be needed for modern versions of java, it should just dynamically look
             // at the classpath for you, but leaving it here incase im wrong
             // Class.forName("org.sqlite.JDBC");
             var jdbcString = String.format("jdbc:sqlite:%s/hifumibot.db", dataDirectory);
             
             Log.info("Opening read connection with JBDC string: " + jdbcString);
-            this.readConnection = DriverManager.getConnection(jdbcString);
+            this.readConnection = DriverManager.getConnection(jdbcString, config.toProperties());
             this.ensureDatabaseIsInitialized(this.readConnection);
             
             Log.info("Opening write connection with JDBC string: " + jdbcString);
-            this.writeConnection = DriverManager.getConnection(jdbcString);
+            this.writeConnection = DriverManager.getConnection(jdbcString, config.toProperties());
             this.ensureDatabaseIsInitialized(this.writeConnection);
         } catch (Exception e) {
             Messaging.logException("SQlite", "(constructor)", e);

@@ -19,20 +19,17 @@ public class SQLite {
 
     public SQLite(String dataDirectory) {
         try {
-            SQLiteConfig config = new SQLiteConfig();
-            config.setBusyTimeout(500);
-            
             // NOTE: this shouldn't be needed for modern versions of java, it should just dynamically look
             // at the classpath for you, but leaving it here incase im wrong
             // Class.forName("org.sqlite.JDBC");
             var jdbcString = String.format("jdbc:sqlite:%s/hifumibot.db", dataDirectory);
             
             Log.info("Opening read connection with JBDC string: " + jdbcString);
-            this.readConnection = DriverManager.getConnection(jdbcString, config.toProperties());
+            this.readConnection = DriverManager.getConnection(jdbcString);
             this.ensureDatabaseIsInitialized(this.readConnection);
             
             Log.info("Opening write connection with JDBC string: " + jdbcString);
-            this.writeConnection = DriverManager.getConnection(jdbcString, config.toProperties());
+            this.writeConnection = DriverManager.getConnection(jdbcString);
             this.ensureDatabaseIsInitialized(this.writeConnection);
         } catch (Exception e) {
             Messaging.logException("SQlite", "(constructor)", e);

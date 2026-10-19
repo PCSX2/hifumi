@@ -6,8 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-
-import org.sqlite.SQLiteConfig;
+import java.sql.Statement;
 
 import net.pcsx2.hifumi.util.Log;
 import net.pcsx2.hifumi.util.Messaging;
@@ -66,7 +65,17 @@ public class SQLite {
 
     private void ensureDatabaseIsInitialized(Connection conn) {
         try {
+            try (Statement statement = conn.createStatement()) {
+                statement.execute("PRAGMA journal_mode=WAL;");
+                statement.execute("PRAGMA busy_timeout=5000");
+            }
+            
+            if (!conn.getAutoCommit()) {
+                conn.commit();
+            }
+            
             conn.setAutoCommit(false); // begin transaction
+            
             for (var migrationFile : schemaMigrations) {
                 var resourcePath = String.format("db/migrations/%s", migrationFile);
                 var is = SQLite.class.getClassLoader().getResourceAsStream(resourcePath);
